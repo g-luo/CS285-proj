@@ -38,13 +38,20 @@ class StockEnvTrain(gym.Env):
         self.data = self.df.loc[self.day,:]
         self.terminal = False             
         # initalize state
+        # self.state = [INITIAL_ACCOUNT_BALANCE] + \
+        #               self.data.adjcp.values.tolist() + \
+        #               [0]*STOCK_DIM + \
+        #               self.data.macd.values.tolist() + \
+        #               self.data.rsi.values.tolist() + \
+        #               self.data.cci.values.tolist() + \
+        #               self.data.adx.values.tolist()
         self.state = [INITIAL_ACCOUNT_BALANCE] + \
-                      self.data.adjcp.values.tolist() + \
+                      [self.data.adjcp] + \
                       [0]*STOCK_DIM + \
-                      self.data.macd.values.tolist() + \
-                      self.data.rsi.values.tolist() + \
-                      self.data.cci.values.tolist() + \
-                      self.data.adx.values.tolist()
+                      [self.data.macd] + \
+                      [self.data.rsi] + \
+                      [self.data.cci] + \
+                      [self.data.adx]
         # initialize reward
         self.reward = 0
         self.cost = 0
