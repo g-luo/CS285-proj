@@ -45,12 +45,12 @@ class StockEnvTrade(gym.Env):
         self.turbulence_threshold = turbulence_threshold
         # initalize state
         self.state = [INITIAL_ACCOUNT_BALANCE] + \
-                      self.data.adjcp.values.tolist() + \
+                      self.data.adjcp.tolist() + \
                       [0]*STOCK_DIM + \
-                      self.data.macd.values.tolist() + \
-                      self.data.rsi.values.tolist() + \
-                      self.data.cci.values.tolist() + \
-                      self.data.adx.values.tolist()
+                      self.data.macd.tolist() + \
+                      self.data.rsi.tolist() + \
+                      self.data.cci.tolist() + \
+                      self.data.adx.tolist()
         # initialize reward
         self.reward = 0
         self.turbulence = 0
