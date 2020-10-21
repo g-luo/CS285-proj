@@ -44,7 +44,9 @@ class StockEnvValidation(gym.Env):
         self.turbulence_threshold = turbulence_threshold
         # initalize state
         self.reset_state([INITIAL_ACCOUNT_BALANCE], [0]*STOCK_DIM)
-        
+
+        print(self.observation_space)
+
         # initialize reward
         self.reward = 0
         self.turbulence = 0
