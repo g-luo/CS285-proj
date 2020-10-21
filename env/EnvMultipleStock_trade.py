@@ -40,14 +40,14 @@ class StockEnvTrade(gym.Env):
         self.action_space = spaces.Box(low = -1, high = 1,shape = (STOCK_DIM,)) 
         # Shape = 181: [Current Balance]+[prices 1-30]+[owned shares 1-30] 
         # +[macd 1-30]+ [rsi 1-30] + [cci 1-30] + [adx 1-30]
-        self.observation_space = spaces.Box(low=0, high=np.inf, shape = (181,))
+        self.observation_space = spaces.Box(low=0, high=np.inf, shape = (6 * STOCK_DIM + 1,))
         # load data from a pandas dataframe
         self.data = self.df.loc[self.day,:]
         self.terminal = False     
         self.turbulence_threshold = turbulence_threshold
         # initalize state
         self.reset_state([INITIAL_ACCOUNT_BALANCE], [0]*STOCK_DIM)
-        
+
         # initialize reward
         self.reward = 0
         self.turbulence = 0
@@ -125,7 +125,7 @@ class StockEnvTrade(gym.Env):
             print("previous_total_asset:{}".format(self.asset_memory[0]))           
 
             print("end_total_asset:{}".format(end_total_asset))
-            print("total_reward:{}".format(self.state[0]+sum(np.array(self.state[1:(STOCK_DIM+1)])*np.array(self.state[(STOCK_DIM+1):61]))- self.asset_memory[0] ))
+            print("total_reward:{}".format(self.state[0]+sum(np.array(self.state[1:(STOCK_DIM+1)])*np.array(self.state[(STOCK_DIM+1):(STOCK_DIM*2+1)]))- self.asset_memory[0] ))
             print("total_cost: ", self.cost)
             print("total trades: ", self.trades)
 
