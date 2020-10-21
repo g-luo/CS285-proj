@@ -162,8 +162,8 @@ def process_yahoo_finance(csv_path, ticker):
   df = df.drop(["Close"], axis=1)
   df = df.rename(columns=col_mappings)
   
-  df = add_technical_indicator(df)
   df = df[list(col_mappings.values())]
+  df = add_technical_indicator(df)
 
   df.fillna(method='bfill',inplace=True)
 
