@@ -17,6 +17,7 @@ HMAX_NORMALIZE = 100
 INITIAL_ACCOUNT_BALANCE=1000000
 # total number of stocks in our portfolio
 STOCK_DIM = 1
+# STOCK_DIM = 30
 # transaction fee: 1/1000 reasonable percentage
 TRANSACTION_FEE_PERCENT = 0.001
 
@@ -125,8 +126,9 @@ class StockEnvTrain(gym.Env):
             actions = actions * HMAX_NORMALIZE
             #actions = (actions.astype(int))
             
+            print(len(self.state))
             begin_total_asset = self.state[0]+ \
-            sum(np.array(self.state[1:(STOCK_DIM+1)])*np.array(self.state[(STOCK_DIM+1):61]))
+            sum(np.array(self.state[1:(STOCK_DIM+1)])*np.array(self.state[(STOCK_DIM+1): 2 * STOCK_DIM + 1]))
             #print("begin_total_asset:{}".format(begin_total_asset))
             
             argsort_actions = np.argsort(actions)
@@ -146,10 +148,10 @@ class StockEnvTrain(gym.Env):
             self.data = self.df.loc[self.day,:]         
             #load next state
             # print("stock_shares:{}".format(self.state[29:]))
-            self.reset_state([self.state[0]], list(self.state[(STOCK_DIM+1):61]))
+            self.reset_state([self.state[0]], list(self.state[(STOCK_DIM+1): 2 * STOCK_DIM + 1]))
             
             end_total_asset = self.state[0]+ \
-            sum(np.array(self.state[1:(STOCK_DIM+1)])*np.array(self.state[(STOCK_DIM+1):61]))
+            sum(np.array(self.state[1:(STOCK_DIM+1)])*np.array(self.state[(STOCK_DIM+1): 2 * STOCK_DIM + 1]))
             
             #print("end_total_asset:{}".format(end_total_asset))
             
