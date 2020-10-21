@@ -8,6 +8,8 @@ matplotlib.use('Agg')
 import matplotlib.pyplot as plt
 import pickle
 
+from preprocessing.utils import series_to_list
+
 # shares normalization factor
 # 100 shares per trade
 HMAX_NORMALIZE = 100
@@ -44,13 +46,8 @@ class StockEnvTrade(gym.Env):
         self.terminal = False     
         self.turbulence_threshold = turbulence_threshold
         # initalize state
-        self.state = [INITIAL_ACCOUNT_BALANCE] + \
-                      self.data.adjcp.tolist() + \
-                      [0]*STOCK_DIM + \
-                      self.data.macd.tolist() + \
-                      self.data.rsi.tolist() + \
-                      self.data.cci.tolist() + \
-                      self.data.adx.tolist()
+        self.reset_state([INITIAL_ACCOUNT_BALANCE], [0]*STOCK_DIM)
+        
         # initialize reward
         self.reward = 0
         self.turbulence = 0
@@ -178,13 +175,7 @@ class StockEnvTrade(gym.Env):
             #print(self.turbulence)
             #load next state
             # print("stock_shares:{}".format(self.state[29:]))
-            self.state =  [self.state[0]] + \
-                    self.data.adjcp.values.tolist() + \
-                    list(self.state[(STOCK_DIM+1):(STOCK_DIM*2+1)]) + \
-                    self.data.macd.values.tolist() + \
-                    self.data.rsi.values.tolist() + \
-                    self.data.cci.values.tolist() + \
-                    self.data.adx.values.tolist()
+            self.reset_state([self.state[0]], list(self.state[(STOCK_DIM+1):(STOCK_DIM*2+1)]))
             
             end_total_asset = self.state[0]+ \
             sum(np.array(self.state[1:(STOCK_DIM+1)])*np.array(self.state[(STOCK_DIM+1):(STOCK_DIM*2+1)]))
@@ -211,13 +202,8 @@ class StockEnvTrade(gym.Env):
             #self.iteration=self.iteration
             self.rewards_memory = []
             #initiate state
-            self.state = [INITIAL_ACCOUNT_BALANCE] + \
-                          self.data.adjcp.values.tolist() + \
-                          [0]*STOCK_DIM + \
-                          self.data.macd.values.tolist() + \
-                          self.data.rsi.values.tolist()  + \
-                          self.data.cci.values.tolist()  + \
-                          self.data.adx.values.tolist() 
+            self.reset_state([INITIAL_ACCOUNT_BALANCE], [0]*STOCK_DIM)
+          
         else:
             previous_total_asset = self.previous_state[0]+ \
             sum(np.array(self.previous_state[1:(STOCK_DIM+1)])*np.array(self.previous_state[(STOCK_DIM+1):(STOCK_DIM*2+1)]))
@@ -235,13 +221,7 @@ class StockEnvTrade(gym.Env):
             #self.previous_state[(STOCK_DIM+1):(STOCK_DIM*2+1)]
             #[0]*STOCK_DIM + \
 
-            self.state = [ self.previous_state[0]] + \
-                          self.data.adjcp.values.tolist() + \
-                          self.previous_state[(STOCK_DIM+1):(STOCK_DIM*2+1)]+ \
-                          self.data.macd.values.tolist() + \
-                          self.data.rsi.values.tolist()  + \
-                          self.data.cci.values.tolist()  + \
-                          self.data.adx.values.tolist() 
+            self.reset_state([self.previous_state[0]], self.previous_state[(STOCK_DIM+1):(STOCK_DIM*2+1)])
             
         return self.state
     
@@ -252,3 +232,12 @@ class StockEnvTrade(gym.Env):
     def _seed(self, seed=None):
         self.np_random, seed = seeding.np_random(seed)
         return [seed]
+    
+    def reset_state(self, balance, stocks):
+      self.state = balance + \
+                      series_to_list(self.data.adjcp) + \
+                      stocks + \
+                      series_to_list(self.data.macd) + \
+                      series_to_list(self.data.rsi) + \
+                      series_to_list(self.data.cci) + \
+                      series_to_list(self.data.adx)
