@@ -150,7 +150,24 @@ def calcualte_turbulence(df):
                                      'turbulence':turbulence_index})
     return turbulence_index
 
+def process_yahoo_finance(csv_path, ticker):
 
+  df = pd.read_csv(csv_path)
+
+  col_mappings = {"Tic": "tic", "Date":"datadate", "Open":"open", "High":"high", "Low":"low", "Volume":"volume", "Adj Close":"adjcp"}
+  df["Date"] = df["Date"].apply(lambda x: "".join(x.split("-")))
+  df["Date"] = pd.to_numeric(df["Date"])
+  df["Tic"] = ticker
+
+  df = df.drop(["Close"], axis=1)
+  df = df.rename(columns=col_mappings)
+  
+  df = add_technical_indicator(df)
+  df = df[list(col_mappings.values())]
+
+  df.fillna(method='bfill',inplace=True)
+
+  return df
 
 
 
