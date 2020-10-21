@@ -126,7 +126,6 @@ class StockEnvTrain(gym.Env):
             actions = actions * HMAX_NORMALIZE
             #actions = (actions.astype(int))
             
-            print(len(self.state))
             begin_total_asset = self.state[0]+ \
             sum(np.array(self.state[1:(STOCK_DIM+1)])*np.array(self.state[(STOCK_DIM+1): 2 * STOCK_DIM + 1]))
             #print("begin_total_asset:{}".format(begin_total_asset))
