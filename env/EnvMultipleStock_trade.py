@@ -16,7 +16,7 @@ HMAX_NORMALIZE = 100
 # initial amount of money we have in our account
 INITIAL_ACCOUNT_BALANCE=1000000
 # total number of stocks in our portfolio
-STOCK_DIM = 30
+STOCK_DIM = 1
 # transaction fee: 1/1000 reasonable percentage
 TRANSACTION_FEE_PERCENT = 0.001
 
@@ -171,7 +171,7 @@ class StockEnvTrade(gym.Env):
 
             self.day += 1
             self.data = self.df.loc[self.day,:]         
-            self.turbulence = self.data['turbulence'].values[0]
+            self.turbulence = series_to_list(self.data['turbulence'])[0]
             #print(self.turbulence)
             #load next state
             # print("stock_shares:{}".format(self.state[29:]))
