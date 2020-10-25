@@ -40,7 +40,6 @@ def train_TD3(env_train, model_name, timesteps=50000):
     """TD3 model"""
 
     start = time.time()
-    #model = DDPG('MlpPolicy', env_train)
     model = TD3('MlpPolicy', env_train)
     model.learn(total_timesteps=timesteps, log_interval=10)
     end = time.time()
