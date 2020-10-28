@@ -50,7 +50,7 @@ def train_HER(env_train, model_name, timesteps=50000):
 
 def train_DQN(env_train, model_name, timesteps=50000):
     start = time.time()
-    model = DQN('MlpPolicy', env_train, verbose=0)
+    model = DQN('MlpPolicy', env_train, verbose=1)
     model.learn(total_timesteps=timesteps)
     end = time.time()
 
@@ -287,10 +287,14 @@ def run_ensemble_strategy(df, unique_trade_date, rebalance_window, validation_wi
     end = time.time()
     print("Ensemble Strategy took: ", (end - start) / 60, " minutes")
 
-def run_PPO(df, unique_trade_date, rebalance_window, validation_window) -> None:
-    print("============Start PPO Strategy============")
-    last_state_ppo = []
-    ppo_sharpe_list = []
+def run_strategy(df, unique_trade_date, rebalance_window, validation_window, strategy) -> None:
+    if strategy == 'Ensemble':
+        run_ensemble_strategy(df, unique_trade_date, rebalance_window, validation_window)
+        return
+    
+    print("============Start " + strategy + " Strategy============")
+    last_state = []
+    sharpe_list = []
     model_use = []
 
     # based on the analysis of the in-sample data
@@ -345,30 +349,51 @@ def run_PPO(df, unique_trade_date, rebalance_window, validation_window) -> None:
         ############## Training and Validation starts ##############
         print("======Model training from: ", 20090000, "to ",
               unique_trade_date[i - rebalance_window - validation_window])
-        # print("training: ",len(data_split(df, start=20090000, end=test.datadate.unique()[i-rebalance_window]) ))
-        # print("==============Model Training===========")
+        if strategy == 'PPO':
+            print("======PPO Training========")
+            model_ppo = train_PPO(env_train, model_name="PPO_100k_dow_{}".format(i), timesteps=50000)
+            print("======PPO Validation from: ", unique_trade_date[i - rebalance_window - validation_window], "to ",
+                unique_trade_date[i - rebalance_window])
+            DRL_validation(model=model_ppo, test_data=validation, test_env=env_val, test_obs=obs_val)
+            sharpe_ppo = get_validation_sharpe(i)
+            print("PPO Sharpe Ratio: ", sharpe_ppo)
+            sharpe_list.append(sharpe_ppo)
+            model_ensemble = model_ppo
 
-        print("======PPO Training========")
-        model_ppo = train_PPO(env_train, model_name="PPO_100k_dow_{}".format(i), timesteps=50000)
-        print("======PPO Validation from: ", unique_trade_date[i - rebalance_window - validation_window], "to ",
-              unique_trade_date[i - rebalance_window])
-        DRL_validation(model=model_ppo, test_data=validation, test_env=env_val, test_obs=obs_val)
-        sharpe_ppo = get_validation_sharpe(i)
-        print("PPO Sharpe Ratio: ", sharpe_ppo)
+        elif strategy == 'A2C':
+            print("======A2C Training========")
+            model_a2c = train_A2C(env_train, model_name="A2C_10k_dow_{}".format(i), timesteps=10000)
+            print("======A2C Validation from: ", unique_trade_date[i - rebalance_window - validation_window], "to ",
+                unique_trade_date[i - rebalance_window])
+            DRL_validation(model=model_a2c, test_data=validation, test_env=env_val, test_obs=obs_val)
+            sharpe_a2c = get_validation_sharpe(i)
+            print("A2C Sharpe Ratio: ", sharpe_a2c)
+            sharpe_list.append(sharpe_a2c)
+            model_ensemble = model_a2c
 
-        ppo_sharpe_list.append(sharpe_ppo)
+        elif strategy == 'DDPG': 
+            print("======DDPG Training========")
+            model_ddpg = train_DDPG(env_train, model_name="DDPG_10k_dow_{}".format(i), timesteps=20000)
+            print("======DDPG Validation from: ", unique_trade_date[i - rebalance_window - validation_window], "to ",
+                unique_trade_date[i - rebalance_window])
+            DRL_validation(model=model_ddpg, test_data=validation, test_env=env_val, test_obs=obs_val)
+            sharpe_ddpg = get_validation_sharpe(i)
+            print("DDPG Sharpe Ratio: ", sharpe_ddpg)
+            sharpe_list.append(sharpe_ddpg)
+            model_ensemble = model_ddpg
+        else:
+            print("Model is not part of supported list. Please choose from following list for strategy [Ensemble, PPO, A2C, DDPG]")
+            return
 
-        # Model Selection based on sharpe ratio
-        model_ensemble = model_ppo
-        model_use.append('PPO')
+        model_use.append(strategy)
         ############## Training and Validation ends ##############    
 
         ############## Trading starts ##############    
         print("======Trading from: ", unique_trade_date[i - rebalance_window], "to ", unique_trade_date[i])
         #print("Used Model: ", model_ensemble)
 
-        last_state_ppo = DRL_prediction(df=df, model=model_ensemble, name="ppo",
-                                             last_state=last_state_ppo, iter_num=i,
+        last_state = DRL_prediction(df=df, model=model_ensemble, name=strategy,
+                                             last_state=last_state, iter_num=i,
                                              unique_trade_date=unique_trade_date,
                                              rebalance_window=rebalance_window,
                                              turbulence_threshold=turbulence_threshold,
@@ -377,4 +402,4 @@ def run_PPO(df, unique_trade_date, rebalance_window, validation_window) -> None:
         ############## Trading ends ##############    
 
     end = time.time()
-    print("PPO Strategy took: ", (end - start) / 60, " minutes")
+    print(strategy + " Strategy took: ", (end - start) / 60, " minutes")

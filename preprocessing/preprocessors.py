@@ -2,6 +2,7 @@ import numpy as np
 import pandas as pd
 from stockstats import StockDataFrame as Sdf
 from config import config
+import os.path
 
 def load_dataset(*, file_name: str) -> pd.DataFrame:
     """
@@ -152,6 +153,10 @@ def calcualte_turbulence(df):
 
 def process_yahoo_finance(csv_path, ticker):
 
+  processed_csv = "./data/"+ ticker + "_processed.csv"
+  if (os.path.isfile(processed_csv)):
+    return pd.read_csv(processed_csv)
+  
   df = pd.read_csv(csv_path)
 
   col_mappings = {"Tic": "tic", "Date":"datadate", "Open":"open", "High":"high", "Low":"low", "Volume":"volume", "Adj Close":"adjcp"}
@@ -166,6 +171,9 @@ def process_yahoo_finance(csv_path, ticker):
   df = add_technical_indicator(df)
 
   df.fillna(method='bfill',inplace=True)
+  df = add_turbulence(df)
+
+  df.to_csv(processed_csv) 
 
   return df
 
