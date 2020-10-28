@@ -11,8 +11,9 @@ from torch import optim
 from torch import nn
 from torch import distributions
 import torch
-import utils
-
+from preprocessing import utils
+import numpy as np
+import time 
 
 class PolicyDistillation(object):
 
@@ -20,8 +21,8 @@ class PolicyDistillation(object):
       start = time.time()
       # just learn one by one
       student_network = StudentPolicy(
-          ob_dim = envs[0].observation_space.shape,
-          ac_dim = envs[0].action_space.shape,
+          ob_dim = envs[0].observation_space.shape[0],
+          ac_dim = envs[0].action_space.shape[0],
           n_layers=2, 
           size=64, 
           learning_rate=1e-4
@@ -41,17 +42,15 @@ class StudentPolicy(object):
                  n_layers,
                  size,
                  learning_rate=1e-4
-                 **kwargs
                  ):
-        super().__init__(**kwargs)
-
+        super().__init__()
         # init vars
         self.ob_dim = ob_dim
         self.ac_dim = ac_dim
         self.size = size
+        print(self.ob_dim)
         self.learning_rate = learning_rate
-        self.nn_baseline = nn_baseline
-
+        self.n_layers = n_layers
         self.logits_na = utils.build_mlp(input_size=self.ob_dim,
                                         output_size=self.ac_dim,
                                         n_layers=self.n_layers,
@@ -80,7 +79,7 @@ class StudentPolicy(object):
       
     def update(self, teacher_model, env):
       # set the batch size to the buffer size to train sequentially
-      batch_size = teacher_model.replay_buffer.buffer_size()
+      batch_size = teacher_model.replay_buffer.buffer_size
       obs, acs, rews, obs_tp1, dones = teacher_model.replay_buffer.sample(batch_size, env=env)
       teacher_actions = teacher_model.action_probability(obs, actions=acs)
 

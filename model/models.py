@@ -5,6 +5,7 @@ import time
 import gym
 
 # RL models from stable-baselines
+from stable_baselines import HER
 from stable_baselines import SAC
 from stable_baselines import PPO2
 from stable_baselines import A2C
@@ -22,6 +23,30 @@ from config import config
 from env.EnvMultipleStock_train import StockEnvTrain
 from env.EnvMultipleStock_validation import StockEnvValidation
 from env.EnvMultipleStock_trade import StockEnvTrade
+
+def train_SAC(env_train, model_name, timesteps=50000):
+    start = time.time()
+    model = SAC('MlpPolicy', env_train, verbose=0)
+    model.learn(total_timesteps=timesteps)
+    end = time.time()
+
+    model.save(f"{config.TRAINED_MODEL_DIR}/{model_name}")
+    print('Training time (SAC): ', (end - start) / 60, ' minutes')
+    return model
+
+def train_HER(env_train, model_name, timesteps=50000):
+    start = time.time()
+    n_sampled_goal = 4
+    goal_selection_strategy = 'future'
+    model = HER('MlpPolicy', env_train, model_class=SAC, verbose=0, n_sampled_goal = n_sampled_goal,
+                goal_selection_strategy=goal_selection_strategy)
+    model.learn(total_timesteps=timesteps)
+    end = time.time()
+
+    model.save(f"{config.TRAINED_MODEL_DIR}/{model_name}")
+    print('Training time (HER): ', (end - start) / 60, ' minutes')
+    return model
+
 
 def train_DQN(env_train, model_name, timesteps=50000):
     start = time.time()
