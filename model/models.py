@@ -25,7 +25,7 @@ from env.EnvMultipleStock_trade import StockEnvTrade
 
 def train_DQN(env_train, model_name, timesteps=50000):
     start = time.time()
-    model = DQN('MlpPolicy', env_train, verbose=1)
+    model = DQN('MlpPolicy', env_train, verbose=0)
     model.learn(total_timesteps=timesteps)
     end = time.time()
 
