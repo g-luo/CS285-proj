@@ -205,6 +205,6 @@ class StockEnv(gym.Env):
     def render(self, mode='human'):
         return self.state
 
-    def _seed(self, seed=None):
+    def _seed(self, seed=1):
         self.np_random, seed = seeding.np_random(seed)
         return [seed]
