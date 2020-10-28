@@ -10,6 +10,7 @@ from stable_baselines import PPO2
 from stable_baselines import A2C
 from stable_baselines import DDPG
 from stable_baselines import TD3
+from stable_baselines import DQN
 from stable_baselines.ddpg.policies import DDPGPolicy
 from stable_baselines.common.policies import MlpPolicy
 from stable_baselines.common.noise import NormalActionNoise, OrnsteinUhlenbeckActionNoise, AdaptiveParamNoiseSpec
@@ -21,6 +22,16 @@ from config import config
 from env.EnvMultipleStock_train import StockEnvTrain
 from env.EnvMultipleStock_validation import StockEnvValidation
 from env.EnvMultipleStock_trade import StockEnvTrade
+
+def train_DQN(env_train, model_name, timesteps=50000):
+    start = time.time()
+    model = DQN('MlpPolicy', env_train, verbose=1)
+    model.learn(total_timesteps=timesteps)
+    end = time.time()
+
+    model.save(f"{config.TRAINED_MODEL_DIR}/{model_name}")
+    print('Training time (DQN): ', (end - start) / 60, ' minutes')
+    return model
 
 
 def train_A2C(env_train, model_name, timesteps=50000):

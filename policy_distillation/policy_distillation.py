@@ -16,22 +16,22 @@ import utils
 
 class PolicyDistillation(object):
 
-    def run_policy_distillation(self, teachers, env):
+    def run_policy_distillation(self, teachers, envs):
       start = time.time()
       # just learn one by one
       student_network = StudentPolicy(
-          ob_dim = env.observation_space.shape,
-          ac_dim = env.action_space.shape,
+          ob_dim = envs[0].observation_space.shape,
+          ac_dim = envs[0].action_space.shape,
           n_layers=2, 
           size=64, 
           learning_rate=1e-4
       )
-      for teacher in teachers:
-        student_network.update(teacher, env)
+      for i in range(len(teachers)):
+        student_network.update(teachers[i], envs[i])
            
       end = time.time()
       print('Training time: ', (end - start) / 60, ' minutes')
-      
+      return student_network
       # somehow pickle and save the model
 
 class StudentPolicy(object):
