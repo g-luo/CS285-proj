@@ -27,15 +27,17 @@ class PolicyDistillation(object):
           size=64, 
           learning_rate=1e-4
       )
-      for i in range(len(teachers)):
-        student_network.update(teachers[i], envs[i])
-           
+      num_epochs = 50
+      for _ in range(num_epochs):
+        for i in range(len(teachers)):
+          student_network.update(teachers[i], envs[i])
+            
       end = time.time()
       print('Training time: ', (end - start) / 60, ' minutes')
       return student_network
       # somehow pickle and save the model
 
-class StudentPolicy(object):
+class StudentPolicy(nn.Module):
     def __init__(self,
                  ob_dim, 
                  ac_dim,
@@ -73,23 +75,24 @@ class StudentPolicy(object):
       """
         The action space is discrete.
       """
-      logits = self.logits_na(observation)
-      action_distribution = distributions.Categorical(logits=logits)
-      return action_distribution
+      actions = self.logits_na(observation)
+      return actions
       
     def update(self, teacher_model, env):
       # set the batch size to the buffer size to train sequentially
       batch_size = teacher_model.replay_buffer.buffer_size
       obs, acs, rews, obs_tp1, dones = teacher_model.replay_buffer.sample(batch_size, env=env)
-      teacher_actions = teacher_model.action_probability(obs, actions=acs)
+      
 
       observations = utils.from_numpy(obs)
       actions = utils.from_numpy(acs)
-
-      student_distribution = self.forward(observations).log_prob(actions)
-      output = nn.KLDivLoss(student_distribution, teacher_actions, log_target=True)
+      teacher_actions, _ = teacher_model.predict(observations)
+      
+      teacher_actions= utils.from_numpy(teacher_actions)
+      student_actions = self.forward(observations)
+      loss = nn.functional.mse_loss(student_actions, teacher_actions)
       self.optimizer.zero_grad()
-      output.backward()
+      loss.backward()
       self.optimizer.step()
         
 
