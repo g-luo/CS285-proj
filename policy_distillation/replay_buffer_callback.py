@@ -1,5 +1,6 @@
 from stable_baselines.common.callbacks import BaseCallback
 import numpy as np
+import pickle
 
 class ReplayBufferCallback(BaseCallback):
     """
@@ -25,9 +26,16 @@ class ReplayBufferCallback(BaseCallback):
 class ReplayBuffer():
   def __init__(self):
     self.buffer = {}
+
+  def load_from_file(self, path):
+    file = open(path, "rb")
+    self.buffer = pickle.load(file)
   
-  def sample(self):
-    pass
+  def sample(self, batch_size):
+    assert "actions" in self.buffer and "observations" in self.buffer and "rewards" in self.buffer
+    assert self.buffer["actions"].shape[0] == self.buffer["observations"].shape[0] == self.buffer["rewards"].shape[0]
+    idx = np.random.permutation(range(self.buffer["actions"].shape[0]))[:batch_size]
+    return self.buffer["actions"][idx], self.buffer["observations"][idx], self.buffer["rewards"][idx]
 
   def add_to_buffer(self, item, item_type):
     self.buffer[item_type] = np.squeeze(np.array(item))
