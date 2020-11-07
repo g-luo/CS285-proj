@@ -193,3 +193,4 @@ class StockEnvTrain(gym.Env):
                       series_to_list(self.data.rsi) + \
                       series_to_list(self.data.cci) + \
                       series_to_list(self.data.adx)
+                      

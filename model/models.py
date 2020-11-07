@@ -470,4 +470,3 @@ def run_strategy(df, unique_trade_date, rebalance_window, validation_window, str
 
     end = time.time()
     print(strategy + " Strategy took: ", (end - start) / 60, " minutes")
-
