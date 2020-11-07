@@ -356,9 +356,147 @@ def run_ensemble_strategy(df, unique_trade_date, rebalance_window, validation_wi
     print("Ensemble Strategy took: ", (end - start) / 60, " minutes")
 
 def run_strategy(df, unique_trade_date, rebalance_window, validation_window, strategy) -> None:
-    if strategy == 'Ensemble':
-        run_ensemble_strategy(df, unique_trade_date, rebalance_window, validation_window)
-        return
+    print("============Start " + strategy + " Strategy============")
+
+    # based on the analysis of the in-sample data
+    #turbulence_threshold = 140
+    insample_turbulence = df[(df.datadate<20151000) & (df.datadate>=20090000)]
+    insample_turbulence = insample_turbulence.drop_duplicates(subset=['datadate'])
+    insample_turbulence_threshold = np.quantile(insample_turbulence.turbulence.values, .90)
+    turbulence_threshold = insample_turbulence_threshold
+
+    start = time.time()
+
+    ############## Environment Setup starts ##############
+    ## training env
+    train = data_split(df, start=20090000, end=unique_trade_date[i - rebalance_window - validation_window])
+    env_train = DummyVecEnv([lambda: StockEnvTrain(train)])
+    ############## Environment Setup ends ##############
+
+    ############## Training and Validation starts ##############
+    print("======Model training from: ", 20090000, "to ",
+            unique_trade_date[i - rebalance_window - validation_window])
+    if strategy == 'PPO':
+        print("======PPO Training========")
+        # TODO: Name Model appropriately by include what it is being trained on
+        model_ppo = train_PPO(env_train, model_name="PPO", timesteps=50000)
+        model_selected = model_ppo
+    
+    ############## Trading starts ##############    
+    print("======Trading from: ", unique_trade_date[i - rebalance_window], "to ", unique_trade_date[i])
+
+    last_state = DRL_prediction(df=df, model=model_selected, name=strategy,
+                                            last_state=last_state, iter_num=i,
+                                            unique_trade_date=unique_trade_date,
+                                            rebalance_window=rebalance_window,
+                                            turbulence_threshold=turbulence_threshold,
+                                            initial=initial)
+    # print("============Trading Done============")
+    ############## Trading ends ##############    
+
+    end = time.time()
+    print(strategy + " Strategy took: ", (end - start) / 60, " minutes")
+
+    # for i in range(rebalance_window + validation_window, len(unique_trade_date), rebalance_window):
+    #     print("============================================")
+    #     ## initial state is empty
+    #     if i - rebalance_window - validation_window == 0:
+    #         # inital state
+    #         initial = True
+    #     else:
+    #         # previous state
+    #         initial = False
+
+    #     # Tuning trubulence index based on historical data
+    #     # Turbulence lookback window is one quarter
+    #     historical_turbulence = df[(df.datadate<unique_trade_date[i - rebalance_window - validation_window]) & (df.datadate>=(unique_trade_date[i - rebalance_window - validation_window-63]))]
+    #     historical_turbulence = historical_turbulence.drop_duplicates(subset=['datadate'])
+    #     historical_turbulence_mean = np.mean(historical_turbulence.turbulence.values)   
+
+    #     if historical_turbulence_mean > insample_turbulence_threshold:
+    #         # if the mean of the historical data is greater than the 90% quantile of insample turbulence data
+    #         # then we assume that the current market is volatile, 
+    #         # therefore we set the 90% quantile of insample turbulence data as the turbulence threshold 
+    #         # meaning the current turbulence can't exceed the 90% quantile of insample turbulence data
+    #         turbulence_threshold = insample_turbulence_threshold
+    #     else:
+    #         # if the mean of the historical data is less than the 90% quantile of insample turbulence data
+    #         # then we tune up the turbulence_threshold, meaning we lower the risk 
+    #         turbulence_threshold = np.quantile(insample_turbulence.turbulence.values, 0.99)
+    #     print("turbulence_threshold: ", turbulence_threshold)
+
+    #     ############## Environment Setup starts ##############
+    #     ## training env
+    #     train = data_split(df, start=20090000, end=unique_trade_date[i - rebalance_window - validation_window])
+    #     env_train = DummyVecEnv([lambda: StockEnvTrain(train)])
+
+    #     ## validation env
+    #     validation = data_split(df, start=unique_trade_date[i - rebalance_window - validation_window],
+    #                             end=unique_trade_date[i - rebalance_window])
+    #     env_val = DummyVecEnv([lambda: StockEnvValidation(validation,
+    #                                                       turbulence_threshold=turbulence_threshold,
+    #                                                       iteration=i)])
+    #     obs_val = env_val.reset()
+    #     ############## Environment Setup ends ##############
+
+    #     ############## Training and Validation starts ##############
+    #     print("======Model training from: ", 20090000, "to ",
+    #           unique_trade_date[i - rebalance_window - validation_window])
+    #     if strategy == 'PPO':
+    #         print("======PPO Training========")
+    #         model_ppo = train_PPO(env_train, model_name="PPO_100k_dow_{}".format(i), timesteps=50000)
+    #         print("======PPO Validation from: ", unique_trade_date[i - rebalance_window - validation_window], "to ",
+    #             unique_trade_date[i - rebalance_window])
+    #         DRL_validation(model=model_ppo, test_data=validation, test_env=env_val, test_obs=obs_val)
+    #         sharpe_ppo = get_validation_sharpe(i)
+    #         print("PPO Sharpe Ratio: ", sharpe_ppo)
+    #         sharpe_list.append(sharpe_ppo)
+    #         model_selected = model_ppo
+
+    #     elif strategy == 'A2C':
+    #         print("======A2C Training========")
+    #         model_a2c = train_A2C(env_train, model_name="A2C_10k_dow_{}".format(i), timesteps=10000)
+    #         print("======A2C Validation from: ", unique_trade_date[i - rebalance_window - validation_window], "to ",
+    #             unique_trade_date[i - rebalance_window])
+    #         DRL_validation(model=model_a2c, test_data=validation, test_env=env_val, test_obs=obs_val)
+    #         sharpe_a2c = get_validation_sharpe(i)
+    #         print("A2C Sharpe Ratio: ", sharpe_a2c)
+    #         sharpe_list.append(sharpe_a2c)
+    #         model_selected = model_a2c
+
+    #     elif strategy == 'DDPG': 
+    #         print("======DDPG Training========")
+    #         model_ddpg = train_DDPG(env_train, model_name="DDPG_10k_dow_{}".format(i), timesteps=20000)
+    #         print("======DDPG Validation from: ", unique_trade_date[i - rebalance_window - validation_window], "to ",
+    #             unique_trade_date[i - rebalance_window])
+    #         DRL_validation(model=model_ddpg, test_data=validation, test_env=env_val, test_obs=obs_val)
+    #         sharpe_ddpg = get_validation_sharpe(i)
+    #         print("DDPG Sharpe Ratio: ", sharpe_ddpg)
+    #         sharpe_list.append(sharpe_ddpg)
+    #         model_selected = model_ddpg
+    #     else:
+    #         print("Model is not part of supported list. Please choose from following list for strategy [Ensemble, PPO, A2C, DDPG]")
+    #         return
+
+    #     model_use.append(strategy)
+    #     ############## Training and Validation ends ##############    
+
+    #     ############## Trading starts ##############    
+    #     print("======Trading from: ", unique_trade_date[i - rebalance_window], "to ", unique_trade_date[i])
+
+    #     last_state = DRL_prediction(df=df, model=model_selected, name=strategy,
+    #                                          last_state=last_state, iter_num=i,
+    #                                          unique_trade_date=unique_trade_date,
+    #                                          rebalance_window=rebalance_window,
+    #                                          turbulence_threshold=turbulence_threshold,
+    #                                          initial=initial)
+    #     # print("============Trading Done============")
+    #     ############## Trading ends ##############    
+
+    # end = time.time()
+    # print(strategy + " Strategy took: ", (end - start) / 60, " minutes")
+
+def run_student(df, unique_trade_date, rebalance_window, validation_window, student_model, strategy='Student') -> None:
     
     print("============Start " + strategy + " Strategy============")
     last_state = []
@@ -400,71 +538,17 @@ def run_strategy(df, unique_trade_date, rebalance_window, validation_window, str
             turbulence_threshold = np.quantile(insample_turbulence.turbulence.values, 0.99)
         print("turbulence_threshold: ", turbulence_threshold)
 
-        ############## Environment Setup starts ##############
-        ## training env
-        train = data_split(df, start=20090000, end=unique_trade_date[i - rebalance_window - validation_window])
-        env_train = DummyVecEnv([lambda: StockEnvTrain(train)])
-
-        ## validation env
-        validation = data_split(df, start=unique_trade_date[i - rebalance_window - validation_window],
-                                end=unique_trade_date[i - rebalance_window])
-        env_val = DummyVecEnv([lambda: StockEnvValidation(validation,
-                                                          turbulence_threshold=turbulence_threshold,
-                                                          iteration=i)])
-        obs_val = env_val.reset()
-        ############## Environment Setup ends ##############
-
-        ############## Training and Validation starts ##############
-        print("======Model training from: ", 20090000, "to ",
-              unique_trade_date[i - rebalance_window - validation_window])
-        if strategy == 'PPO':
-            print("======PPO Training========")
-            model_ppo = train_PPO(env_train, model_name="PPO_100k_dow_{}".format(i), timesteps=50000)
-            print("======PPO Validation from: ", unique_trade_date[i - rebalance_window - validation_window], "to ",
-                unique_trade_date[i - rebalance_window])
-            DRL_validation(model=model_ppo, test_data=validation, test_env=env_val, test_obs=obs_val)
-            sharpe_ppo = get_validation_sharpe(i)
-            print("PPO Sharpe Ratio: ", sharpe_ppo)
-            sharpe_list.append(sharpe_ppo)
-            model_selected = model_ppo
-
-        elif strategy == 'A2C':
-            print("======A2C Training========")
-            model_a2c = train_A2C(env_train, model_name="A2C_10k_dow_{}".format(i), timesteps=10000)
-            print("======A2C Validation from: ", unique_trade_date[i - rebalance_window - validation_window], "to ",
-                unique_trade_date[i - rebalance_window])
-            DRL_validation(model=model_a2c, test_data=validation, test_env=env_val, test_obs=obs_val)
-            sharpe_a2c = get_validation_sharpe(i)
-            print("A2C Sharpe Ratio: ", sharpe_a2c)
-            sharpe_list.append(sharpe_a2c)
-            model_selected = model_a2c
-
-        elif strategy == 'DDPG': 
-            print("======DDPG Training========")
-            model_ddpg = train_DDPG(env_train, model_name="DDPG_10k_dow_{}".format(i), timesteps=20000)
-            print("======DDPG Validation from: ", unique_trade_date[i - rebalance_window - validation_window], "to ",
-                unique_trade_date[i - rebalance_window])
-            DRL_validation(model=model_ddpg, test_data=validation, test_env=env_val, test_obs=obs_val)
-            sharpe_ddpg = get_validation_sharpe(i)
-            print("DDPG Sharpe Ratio: ", sharpe_ddpg)
-            sharpe_list.append(sharpe_ddpg)
-            model_selected = model_ddpg
-        else:
-            print("Model is not part of supported list. Please choose from following list for strategy [Ensemble, PPO, A2C, DDPG]")
-            return
-
-        model_use.append(strategy)
         ############## Training and Validation ends ##############    
 
         ############## Trading starts ##############    
         print("======Trading from: ", unique_trade_date[i - rebalance_window], "to ", unique_trade_date[i])
 
-        last_state = DRL_prediction(df=df, model=model_selected, name=strategy,
-                                             last_state=last_state, iter_num=i,
-                                             unique_trade_date=unique_trade_date,
-                                             rebalance_window=rebalance_window,
-                                             turbulence_threshold=turbulence_threshold,
-                                             initial=initial)
+        last_state = DRL_prediction(df=df, model=student_model, name=strategy,
+                                            last_state=last_state, iter_num=i,
+                                            unique_trade_date=unique_trade_date,
+                                            rebalance_window=rebalance_window,
+                                            turbulence_threshold=turbulence_threshold,
+                                            initial=initial)
         # print("============Trading Done============")
         ############## Trading ends ##############    
 
