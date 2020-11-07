@@ -12,8 +12,8 @@ class ReplayBufferCallback(BaseCallback):
         super().__init__(verbose)
         self.replay_buffer = ReplayBuffer()
 
-    def get_replay_buffer(self):
-      return self.replay_buffer
+    def get_buffer(self):
+      return self.replay_buffer.get_buffer()
 
     def _on_training_end(self):
       """
