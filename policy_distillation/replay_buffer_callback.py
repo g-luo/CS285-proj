@@ -12,8 +12,8 @@ class ReplayBufferCallback(BaseCallback):
         super().__init__(verbose)
         self.replay_buffer = ReplayBuffer()
 
-    def get_buffer(self):
-      return self.replay_buffer.get_buffer()
+    def get_replay_buffer(self):
+      return self.replay_buffer
 
     def _on_training_end(self):
       """
@@ -30,10 +30,13 @@ class ReplayBuffer():
   def load_from_file(self, path):
     file = open(path, "rb")
     self.buffer = pickle.load(file)
-  
-  def sample(self, batch_size):
+
+  def assert_valid_buffer(self):
     assert "actions" in self.buffer and "observations" in self.buffer and "rewards" in self.buffer
     assert self.buffer["actions"].shape[0] == self.buffer["observations"].shape[0] == self.buffer["rewards"].shape[0]
+  
+  def sample(self, batch_size):
+    self.assert_valid_buffer()
     idx = np.random.permutation(range(self.buffer["actions"].shape[0]))[:batch_size]
     return self.buffer["actions"][idx], self.buffer["observations"][idx], self.buffer["rewards"][idx]
 
@@ -42,4 +45,8 @@ class ReplayBuffer():
 
   def get_buffer(self):
     return self.buffer
+  
+  def get_buffer_size(self):
+    self.assert_valid_buffer()
+    return self.buffer["actions"].shape[0]
   

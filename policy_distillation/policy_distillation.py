@@ -30,7 +30,7 @@ class PolicyDistillation(object):
       num_epochs = 50
       for _ in range(num_epochs):
         for i in range(len(teachers)):
-          student_network.update(teachers[i], envs[i])
+          student_network.update(teachers[i])
             
       end = time.time()
       print('Training time: ', (end - start) / 60, ' minutes')
@@ -78,11 +78,10 @@ class StudentPolicy(nn.Module):
       actions = self.logits_na(observation)
       return actions
       
-    def update(self, teacher_model, env):
+    def update(self, teacher_model):
       # set the batch size to the buffer size to train sequentially
-      batch_size = teacher_model.replay_buffer.buffer_size
-      obs, acs, rews, obs_tp1, dones = teacher_model.replay_buffer.sample(batch_size, env=env)
-      
+      batch_size = teacher_model.custom_replay_buffer.get_buffer_size()
+      obs, acs, rews, obs_tp1, dones = teacher_model.custom_replay_buffer.sample(batch_size)
 
       observations = utils.from_numpy(obs)
       actions = utils.from_numpy(acs)
