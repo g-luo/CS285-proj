@@ -67,15 +67,17 @@ class StudentPolicy(nn.Module):
       else:
         observation = obs[None]
       observation = utils.from_numpy(observation)
-      action = self(observation)
-      return utils.to_numpy(action), None
+      action_distribution = self(observation)
+      
+      return utils.to_numpy(action_distribution.sample()), None
     
     def forward(self, observation: torch.FloatTensor):
       """
         The action space is discrete.
       """
-      actions = self.logits_na(observation)
-      return actions
+      logits = self.logits_na(observation)
+      action_distribution = distributions.Categorical(logits=actions)
+      return logits
       
     def update(self, teacher_model):
       # set the batch size to the buffer size to train sequentially
@@ -93,3 +95,6 @@ class StudentPolicy(nn.Module):
       loss.backward()
       self.optimizer.step()
         
+
+
+
