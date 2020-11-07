@@ -1,6 +1,7 @@
 # Model Building Requirements
 numpy==1.16.4
 pandas==1.0.0
+dask[dataframe]==1.1.1
 stockstats
 scikit-learn==0.21.0
 gym==0.15.3
