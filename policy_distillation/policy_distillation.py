@@ -67,9 +67,8 @@ class StudentPolicy(nn.Module):
       else:
         observation = obs[None]
       observation = utils.from_numpy(observation)
-      action_distribution = self(observation)
-      action = action_distribution.sample()
-      return utils.to_numpy(action)
+      action = self(observation)
+      return utils.to_numpy(action), None
     
     def forward(self, observation: torch.FloatTensor):
       """
@@ -81,7 +80,7 @@ class StudentPolicy(nn.Module):
     def update(self, teacher_model):
       # set the batch size to the buffer size to train sequentially
       batch_size = teacher_model.custom_replay_buffer.get_buffer_size()
-      obs, acs, rews = teacher_model.custom_replay_buffer.sample(batch_size)
+      acs, obs, rews = teacher_model.custom_replay_buffer.sample(batch_size)
 
       observations = utils.from_numpy(obs)
       actions = utils.from_numpy(acs)
