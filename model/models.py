@@ -27,6 +27,65 @@ from env.EnvMultipleStock_train import StockEnvTrain
 from env.EnvMultipleStock_validation import StockEnvValidation
 from env.EnvMultipleStock_trade import StockEnvTrade
 
+def run_student(df, unique_trade_date, rebalance_window, validation_window, student_model, strategy='Student'):
+    
+    print("============Start " + strategy + " Strategy============")
+    last_state = []
+    sharpe_list = []
+    model_use = []
+
+    # based on the analysis of the in-sample data
+    #turbulence_threshold = 140
+    insample_turbulence = df[(df.datadate<20151000) & (df.datadate>=20090000)]
+    insample_turbulence = insample_turbulence.drop_duplicates(subset=['datadate'])
+    insample_turbulence_threshold = np.quantile(insample_turbulence.turbulence.values, .90)
+
+    start = time.time()
+    for i in range(rebalance_window + validation_window, len(unique_trade_date), rebalance_window):
+        print("============================================")
+        ## initial state is empty
+        if i - rebalance_window - validation_window == 0:
+            # inital state
+            initial = True
+        else:
+            # previous state
+            initial = False
+
+        # Tuning trubulence index based on historical data
+        # Turbulence lookback window is one quarter
+        historical_turbulence = df[(df.datadate<unique_trade_date[i - rebalance_window - validation_window]) & (df.datadate>=(unique_trade_date[i - rebalance_window - validation_window-63]))]
+        historical_turbulence = historical_turbulence.drop_duplicates(subset=['datadate'])
+        historical_turbulence_mean = np.mean(historical_turbulence.turbulence.values)   
+
+        if historical_turbulence_mean > insample_turbulence_threshold:
+            # if the mean of the historical data is greater than the 90% quantile of insample turbulence data
+            # then we assume that the current market is volatile, 
+            # therefore we set the 90% quantile of insample turbulence data as the turbulence threshold 
+            # meaning the current turbulence can't exceed the 90% quantile of insample turbulence data
+            turbulence_threshold = insample_turbulence_threshold
+        else:
+            # if the mean of the historical data is less than the 90% quantile of insample turbulence data
+            # then we tune up the turbulence_threshold, meaning we lower the risk 
+            turbulence_threshold = np.quantile(insample_turbulence.turbulence.values, 0.99)
+        print("turbulence_threshold: ", turbulence_threshold)
+
+        ############## Training and Validation ends ##############    
+
+        ############## Trading starts ##############    
+        print("======Trading from: ", unique_trade_date[i - rebalance_window], "to ", unique_trade_date[i])
+
+        last_state = DRL_prediction(df=df, model=student_model, name=strategy,
+                                            last_state=last_state, iter_num=i,
+                                            unique_trade_date=unique_trade_date,
+                                            rebalance_window=rebalance_window,
+                                            turbulence_threshold=turbulence_threshold,
+                                            initial=initial)
+        # print("============Trading Done============")
+        ############## Trading ends ##############    
+
+    end = time.time()
+    print(strategy + " Strategy took: ", (end - start) / 60, " minutes")
+
 def train_SAC(env_train, model_name, timesteps=50000):
     start = time.time()
     model = SAC('MlpPolicy', env_train, verbose=0)
@@ -410,62 +469,3 @@ def run_strategy(df, unique_trade_date, rebalance_window, validation_window, str
 
     end = time.time()
     print(strategy + " Strategy took: ", (end - start) / 60, " minutes")
-
-    def run_student(df, unique_trade_date, rebalance_window, validation_window, student_model, strategy='Student') -> None:
-        
-        print("============Start " + strategy + " Strategy============")
-        last_state = []
-        sharpe_list = []
-        model_use = []
-
-        # based on the analysis of the in-sample data
-        #turbulence_threshold = 140
-        insample_turbulence = df[(df.datadate<20151000) & (df.datadate>=20090000)]
-        insample_turbulence = insample_turbulence.drop_duplicates(subset=['datadate'])
-        insample_turbulence_threshold = np.quantile(insample_turbulence.turbulence.values, .90)
-
-        start = time.time()
-        for i in range(rebalance_window + validation_window, len(unique_trade_date), rebalance_window):
-            print("============================================")
-            ## initial state is empty
-            if i - rebalance_window - validation_window == 0:
-                # inital state
-                initial = True
-            else:
-                # previous state
-                initial = False
-
-            # Tuning trubulence index based on historical data
-            # Turbulence lookback window is one quarter
-            historical_turbulence = df[(df.datadate<unique_trade_date[i - rebalance_window - validation_window]) & (df.datadate>=(unique_trade_date[i - rebalance_window - validation_window-63]))]
-            historical_turbulence = historical_turbulence.drop_duplicates(subset=['datadate'])
-            historical_turbulence_mean = np.mean(historical_turbulence.turbulence.values)   
-
-            if historical_turbulence_mean > insample_turbulence_threshold:
-                # if the mean of the historical data is greater than the 90% quantile of insample turbulence data
-                # then we assume that the current market is volatile, 
-                # therefore we set the 90% quantile of insample turbulence data as the turbulence threshold 
-                # meaning the current turbulence can't exceed the 90% quantile of insample turbulence data
-                turbulence_threshold = insample_turbulence_threshold
-            else:
-                # if the mean of the historical data is less than the 90% quantile of insample turbulence data
-                # then we tune up the turbulence_threshold, meaning we lower the risk 
-                turbulence_threshold = np.quantile(insample_turbulence.turbulence.values, 0.99)
-            print("turbulence_threshold: ", turbulence_threshold)
-
-            ############## Training and Validation ends ##############    
-
-            ############## Trading starts ##############    
-            print("======Trading from: ", unique_trade_date[i - rebalance_window], "to ", unique_trade_date[i])
-
-            last_state = DRL_prediction(df=df, model=student_model, name=strategy,
-                                                last_state=last_state, iter_num=i,
-                                                unique_trade_date=unique_trade_date,
-                                                rebalance_window=rebalance_window,
-                                                turbulence_threshold=turbulence_threshold,
-                                                initial=initial)
-            # print("============Trading Done============")
-            ############## Trading ends ##############    
-
-        end = time.time()
-        print(strategy + " Strategy took: ", (end - start) / 60, " minutes")
