@@ -4,6 +4,7 @@ import numpy as np
 import time
 import gym
 import pickle
+import math
 
 # RL models from stable-baselines
 from stable_baselines import HER
@@ -21,6 +22,7 @@ from preprocessing.preprocessors import *
 from config import config
 
 from policy_distillation.replay_buffer_callback import ReplayBufferCallback
+from preprocessing.preprocessors import process_yahoo_finance, data_split
 
 # customized env
 from env.EnvMultipleStock_train import StockEnvTrain
@@ -179,7 +181,6 @@ def train_PPO(env_train, model_name, timesteps=50000):
 
     print('Training time (PPO): ', (end - start) / 60, ' minutes')
     return model
-
 
 def DRL_prediction(df,
                    model,
@@ -378,3 +379,42 @@ def run_ensemble_strategy(df, unique_trade_date, rebalance_window, validation_wi
 
     end = time.time()
     print("Ensemble Strategy took: ", (end - start) / 60, " minutes")
+
+def train_PPO_multitask(initial_model, env_train, idx, timesteps=100):
+  start = time.time()
+  model = initial_model
+  if initial_model == None:
+    model = PPO2('MlpPolicy', env_train)
+    #model.callback = ReplayBufferCallback()
+  model.set_env(env_train)
+  model.learn(total_timesteps=timesteps)
+  end = time.time()
+  print('Iter #', idx, 'Training time (Multitask): ', (end - start) / 60, ' minutes')
+  return model
+  
+def run_multitask(stocks, tickers, quanta, start, end, model_name, timesteps_per_quanta=100):
+  stock_dfs = []
+  for i in range(len(stocks)):
+    df = process_yahoo_finance(stocks[i], tickers[i])
+    stock_dfs.append(data_split(df, start=start, end=end))  
+  merged_stock_df = pd.concat(stock_dfs)
+
+  num_quanta = math.ceil((end - start) / quanta)
+  model = None
+  for t in range(num_quanta):
+    train_start, train_end = start + quanta * t, start + quanta * (t + 1)
+    quanta_df = merged_stock_df[(merged_stock_df.datadate >= train_start) & (merged_stock_df.datadate < train_end)]
+    quanta_df = quanta_df.reset_index()
+    if quanta_df.empty:
+      break
+    quanta_env = DummyVecEnv([lambda: StockEnvTrain(quanta_df)])
+    model = train_PPO_multitask(model, quanta_env, t, timesteps_per_quanta)
+  
+  #model.custom_replay_buffer = replay_buffer_callback.get_replay_buffer()
+  model.save(f"{config.TRAINED_MODEL_DIR}/{model_name}")
+  #with open(f"{config.TRAINED_MODEL_DIR}/{model_name}"+"_buffer.pkl", "wb") as file:
+  #  pickle.dump(replay_buffer_callback.get_buffer(), file)
+
+  return model
+
+
