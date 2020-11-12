@@ -172,6 +172,7 @@ def train_PPO(env_train, model_name, timesteps=50000):
     model.learn(callback=replay_buffer_callback, total_timesteps=timesteps)
     end = time.time()
 
+    model.custom_replay_buffer = replay_buffer_callback.get_replay_buffer()
     model.save(f"{config.TRAINED_MODEL_DIR}/{model_name}")
     with open(f"{config.TRAINED_MODEL_DIR}/{model_name}"+"_buffer.pkl", "wb") as file:
       pickle.dump(replay_buffer_callback.get_buffer(), file)
