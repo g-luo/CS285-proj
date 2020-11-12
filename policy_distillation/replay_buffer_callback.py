@@ -12,6 +12,9 @@ class ReplayBufferCallback(BaseCallback):
         super().__init__(verbose)
         self.replay_buffer = ReplayBuffer()
 
+    def get_buffer(self):
+      return self.replay_buffer.get_buffer()
+    
     def get_replay_buffer(self):
       return self.replay_buffer
 
