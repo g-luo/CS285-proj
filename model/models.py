@@ -432,12 +432,12 @@ def run_strategy(df, unique_trade_date, rebalance_window, validation_window, str
         env_train = DummyVecEnv([lambda: StockEnvTrain(train)])
 
         ## validation env
-        validation = data_split(df, start=unique_trade_date[i - rebalance_window - validation_window],
-                                end=unique_trade_date[i - rebalance_window])
-        env_val = DummyVecEnv([lambda: StockEnvValidation(validation,
-                                                          turbulence_threshold=turbulence_threshold,
-                                                          iteration=i)])
-        obs_val = env_val.reset()
+#         validation = data_split(df, start=unique_trade_date[i - rebalance_window - validation_window],
+#                                 end=unique_trade_date[i - rebalance_window])
+#         env_val = DummyVecEnv([lambda: StockEnvValidation(validation,
+#                                                           turbulence_threshold=turbulence_threshold,
+#                                                           iteration=i)])
+#         obs_val = env_val.reset()
         ############## Environment Setup ends ##############
 
         ############## Training and Validation starts ##############
@@ -490,12 +490,23 @@ def run_strategy(df, unique_trade_date, rebalance_window, validation_window, str
         ############## Trading starts ##############    
         print("======Trading from: ", unique_trade_date[i - rebalance_window], "to ", unique_trade_date[i])
 
-        last_state = DRL_prediction(df=df, model=model_selected, name=strategy,
-                                             last_state=last_state, iter_num=i,
-                                             unique_trade_date=unique_trade_date,
-                                             rebalance_window=rebalance_window,
-                                             turbulence_threshold=turbulence_threshold,
-                                             initial=initial)
+        if strategy != "multitask":
+          last_state = DRL_prediction(df=df, model=model_selected, name=strategy,
+                                              last_state=last_state, iter_num=i,
+                                              unique_trade_date=unique_trade_date,
+                                              rebalance_window=rebalance_window,
+                                              turbulence_threshold=turbulence_threshold,
+                                              initial=initial)
+        else:
+          for ticker in df["tic"].unique():
+            print("======Trading for : " + ticker + "======")
+            ticker_df = df[df["tic"] == ticker]
+            last_state = DRL_prediction(df=ticker_df, model=model_selected, name=strategy + "_" +ticker,
+                                              last_state=last_state, iter_num=i,
+                                              unique_trade_date=unique_trade_date,
+                                              rebalance_window=rebalance_window,
+                                              turbulence_threshold=turbulence_threshold,
+                                              initial=initial)
         # print("============Trading Done============")
         ############## Trading ends ############## 
     model_name = "PPO_" + ticker
@@ -515,10 +526,10 @@ def train_multitask(df, model_name, timesteps=50000):
       quanta_df = df[df["datadate"] == date & df["tic"] == ticker]
       quanta_df = quanta_df.reset_index()
       quanta_env = DummyVecEnv([lambda: StockEnvTrain(quanta_df)])
-      model = train_PPO_multitask(model, quanta_env, t, timesteps_per_quanta)
+      model = train_PPO_multitask(model, quanta_env)
   return model
 
-def train_PPO_multitask(initial_model, env_train, idx, timesteps=10):
+def train_PPO_multitask(initial_model, env_train):
   start = time.time()
   model = initial_model
   if initial_model == None:
@@ -527,7 +538,6 @@ def train_PPO_multitask(initial_model, env_train, idx, timesteps=10):
   model.set_env(env_train)
   model.learn(total_timesteps=timesteps)
   end = time.time()
-  print('Iter #', idx, 'Training time (Multitask): ', (end - start) / 60, ' minutes')
   return model
   
 # def run_multitask(stocks, tickers, quanta, start, end, model_name, timesteps_per_quanta=100):
