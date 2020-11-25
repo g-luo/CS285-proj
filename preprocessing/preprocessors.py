@@ -177,6 +177,17 @@ def process_yahoo_finance(csv_path, ticker):
 
   return df
 
+def get_stock_correlation(stock_1, stock_2):
+  df_1 = pd.read_csv(stock_1)
+  df_2 = pd.read_csv(stock_2)
+
+  merged = df_1.merge(df_2, how="inner", on="Date")
+  merged = merged.fillna(value=0)
+  close_x = merged["Close_x"] / merged["Close_x"].sum()
+  close_y = merged["Close_y"] / merged["Close_y"].sum()
+
+  return np.corrcoef(close_x, close_y)
+
 
 
 
