@@ -1,13 +1,15 @@
 from policy_distillation.policy_distillation import PolicyDistillation
+from preprocessing.preprocessors import data_split, add_turbulence, process_yahoo_finance
 from stable_baselines import PPO2
+from model.models import train_PPO, run_student
+from stable_baselines.common.vec_env import DummyVecEnv
+from env.EnvMultipleStock_train import StockEnvTrain
 import torch
 import os
 
 def train_PPO_models(stocks = ['./data/TSLA.csv', './data/FB.csv'],  
                       tickers = ['TSLA', 'FB'], start_date=20130102, 
                       end_date=20180101):
-  
- 
   teachers = []
   envs = []
   for i in range(len(stocks)):
@@ -45,7 +47,7 @@ def train_policy_distillation(teacher_models, envs):
   student_network = policy_distillaion.run_policy_distillation(teacher_models, envs)
   return student_network
 
-def save_policy_distillation_network(student_network, path="/content/DeepRL4Stocks/trained_models/student_network")
+def save_policy_distillation_network(student_network, path="/content/DeepRL4Stocks/trained_models/student_network"):
   torch.save(student_network.state_dict(), path)
 
 def load_policy_distillation_network(path="/content/DeepRL4Stocks/trained_models/student_network"):
