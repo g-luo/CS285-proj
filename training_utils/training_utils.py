@@ -9,7 +9,7 @@ import os
 
 def train_PPO_models(stocks = ['./data/TSLA.csv', './data/FB.csv'],  
                       tickers = ['TSLA', 'FB'], start_date=20130102, 
-                      end_date=20180101):
+                      end_date=20180101, model_save_path='/content/DeepRL4Stocks/trained_models/'):
   teachers = []
   envs = []
   for i in range(len(stocks)):
@@ -19,6 +19,7 @@ def train_PPO_models(stocks = ['./data/TSLA.csv', './data/FB.csv'],
     
     env_train = DummyVecEnv([lambda: StockEnvTrain(train)])
     model = train_PPO(env_train, model_name='PPO_'+tickers[i])
+    model.save(model_save_path+"PPO_"+tickers[i])
     teachers.append(model)
     envs.append(env_train)
   return teachers, envs
