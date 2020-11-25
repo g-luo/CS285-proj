@@ -380,7 +380,7 @@ def run_ensemble_strategy(df, unique_trade_date, rebalance_window, validation_wi
     end = time.time()
     print("Ensemble Strategy took: ", (end - start) / 60, " minutes")
 
-def run_strategy(df, unique_trade_date, rebalance_window, validation_window, strategy) -> None:
+def run_strategy(df, unique_trade_date, rebalance_window, validation_window, strategy, model_selected=None, ticker="") -> None:
     if strategy == 'Ensemble':
         run_ensemble_strategy(df, unique_trade_date, rebalance_window, validation_window)
         return
@@ -397,7 +397,7 @@ def run_strategy(df, unique_trade_date, rebalance_window, validation_window, str
     insample_turbulence_threshold = np.quantile(insample_turbulence.turbulence.values, .90)
 
     start = time.time()
-    model_selected = None
+    
     for i in range(rebalance_window + validation_window, len(unique_trade_date), rebalance_window):
         print("============================================")
         ## initial state is empty
@@ -446,41 +446,16 @@ def run_strategy(df, unique_trade_date, rebalance_window, validation_window, str
         if strategy == 'PPO':
             print("======PPO Training========")
             model_ppo = train_PPO(env_train, model_name="PPO_" + ticker + "_{}".format(i), timesteps=50000)
-            # print("======PPO Validation from: ", unique_trade_date[i - rebalance_window - validation_window], "to ",
-            #     unique_trade_date[i - rebalance_window])
-            # DRL_validation(model=model_ppo, test_data=validation, test_env=env_val, test_obs=obs_val)
-            # sharpe_ppo = get_validation_sharpe(i)
-            # print("PPO Sharpe Ratio: ", sharpe_ppo)
-            # sharpe_list.append(sharpe_ppo)
+          
             model_selected = model_ppo
-
-        # elif strategy == 'A2C':
-        #     print("======A2C Training========")
-        #     model_a2c = train_A2C(env_train, model_name="A2C_10k_dow_{}".format(i), timesteps=10000)
-        #     print("======A2C Validation from: ", unique_trade_date[i - rebalance_window - validation_window], "to ",
-        #         unique_trade_date[i - rebalance_window])
-        #     DRL_validation(model=model_a2c, test_data=validation, test_env=env_val, test_obs=obs_val)
-        #     sharpe_a2c = get_validation_sharpe(i)
-        #     print("A2C Sharpe Ratio: ", sharpe_a2c)
-        #     sharpe_list.append(sharpe_a2c)
-        #     model_selected = model_a2c
-
-        # elif strategy == 'DDPG': 
-        #     print("======DDPG Training========")
-        #     model_ddpg = train_DDPG(env_train, model_name="DDPG_10k_dow_{}".format(i), timesteps=20000)
-        #     print("======DDPG Validation from: ", unique_trade_date[i - rebalance_window - validation_window], "to ",
-        #         unique_trade_date[i - rebalance_window])
-        #     DRL_validation(model=model_ddpg, test_data=validation, test_env=env_val, test_obs=obs_val)
-        #     sharpe_ddpg = get_validation_sharpe(i)
-        #     print("DDPG Sharpe Ratio: ", sharpe_ddpg)
-        #     sharpe_list.append(sharpe_ddpg)
-        #     model_selected = model_ddpg
+        elif strategy =='policy distillation':
+            pass
         elif strategy == "multitask":
-              print("======Mulitask Training========")
-              name="Multitasks_{}".format(i)
-              model_multitask = train_multitask(train, model_name=name, timesteps=20000)
-              # model_multitask.save(f"{config.TRAINED_MODEL_DIR}/{name}")
-              model_selected = model_multitask
+            print("======Mulitask Training========")
+            name="Multitasks_{}".format(i)
+            model_multitask = train_multitask(train, model_name=name, timesteps=20000)
+            # model_multitask.save(f"{config.TRAINED_MODEL_DIR}/{name}")
+            model_selected = model_multitask
         else:
             print("Model is not part of supported list. Please choose from following list for strategy [Ensemble, PPO, A2C, DDPG]")
             return
@@ -511,7 +486,8 @@ def run_strategy(df, unique_trade_date, rebalance_window, validation_window, str
         # print("============Trading Done============")
         ############## Trading ends ############## 
     model_name = strategy + "_" + ticker
-    model_selected.save(f"{config.TRAINED_MODEL_DIR}/{model_name}")
+    if strategy !='policy distillation':
+      model_selected.save(f"{config.TRAINED_MODEL_DIR}/{model_name}")
     if (hasattr(model_selected, "custom_replay_buffer")):
       with open(f"{config.TRAINED_MODEL_DIR}/{model_name}"+"_buffer.pkl", "wb") as file:
         pickle.dump(model_selected.custom_replay_buffer, file)
