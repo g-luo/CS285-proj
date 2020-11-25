@@ -380,7 +380,7 @@ def run_ensemble_strategy(df, unique_trade_date, rebalance_window, validation_wi
     end = time.time()
     print("Ensemble Strategy took: ", (end - start) / 60, " minutes")
 
-def run_strategy(df, unique_trade_date, rebalance_window, validation_window, strategy, ticker) -> None:
+def run_strategy(df, unique_trade_date, rebalance_window, validation_window, strategy) -> None:
     if strategy == 'Ensemble':
         run_ensemble_strategy(df, unique_trade_date, rebalance_window, validation_window)
         return
@@ -479,7 +479,8 @@ def run_strategy(df, unique_trade_date, rebalance_window, validation_window, str
               print("======Mulitask Training========")
               name="Multitasks_{}".format(i)
               model_multitask = train_multitask(train, model_name=name, timesteps=20000)
-              model_multitask.save(f"{config.TRAINED_MODEL_DIR}/{name}")
+              # model_multitask.save(f"{config.TRAINED_MODEL_DIR}/{name}")
+              model_selected = model_multitask
         else:
             print("Model is not part of supported list. Please choose from following list for strategy [Ensemble, PPO, A2C, DDPG]")
             return
@@ -509,10 +510,11 @@ def run_strategy(df, unique_trade_date, rebalance_window, validation_window, str
                                               initial=initial)
         # print("============Trading Done============")
         ############## Trading ends ############## 
-    model_name = "PPO_" + ticker
+    model_name = strategy + "_" + ticker
     model_selected.save(f"{config.TRAINED_MODEL_DIR}/{model_name}")
-    with open(f"{config.TRAINED_MODEL_DIR}/{model_name}"+"_buffer.pkl", "wb") as file:
-      pickle.dump(model_selected.custom_replay_buffer, file)
+    if (hasattr(model_selected, "custom_replay_buffer")):
+      with open(f"{config.TRAINED_MODEL_DIR}/{model_name}"+"_buffer.pkl", "wb") as file:
+        pickle.dump(model_selected.custom_replay_buffer, file)
     end = time.time()
     print(strategy + " Strategy took: ", (end - start) / 60, " minutes")
 
@@ -523,13 +525,16 @@ def train_multitask(df, model_name, timesteps=50000):
   model = None
   for date in df["datadate"].unique():
     for ticker in df["tic"].unique():
-      quanta_df = df[df["datadate"] == date & df["tic"] == ticker]
+      quanta_df = df[df["datadate"] == date]
+      quanta_df = quanta_df[quanta_df["tic"] == ticker]
+      if quanta_df.empty:
+        continue
       quanta_df = quanta_df.reset_index()
       quanta_env = DummyVecEnv([lambda: StockEnvTrain(quanta_df)])
       model = train_PPO_multitask(model, quanta_env)
   return model
 
-def train_PPO_multitask(initial_model, env_train):
+def train_PPO_multitask(initial_model, env_train, timesteps=10):
   start = time.time()
   model = initial_model
   if initial_model == None:
