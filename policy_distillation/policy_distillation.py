@@ -67,16 +67,16 @@ class StudentPolicy(nn.Module):
       else:
         observation = obs[None]
       observation = utils.from_numpy(observation)
-      action_distribution = self(observation)
+      actions = self(observation)
       
-      return utils.to_numpy(action_distribution.sample()), None
+      return utils.to_numpy(actions), None
     
     def forward(self, observation: torch.FloatTensor):
       """
         The action space is discrete.
       """
       logits = self.logits_na(observation)
-      action_distribution = distributions.Categorical(logits=actions)
+      
       return logits
       
     def update(self, teacher_model):
