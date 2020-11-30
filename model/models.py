@@ -453,7 +453,7 @@ def run_strategy(df, unique_trade_date, rebalance_window, validation_window, str
         elif strategy == "multitask":
             print("======Mulitask Training========")
             name="Multitasks_{}".format(i)
-            model_multitask = train_multitask(train, model_name=name, timesteps=20000)
+            model_multitask = train_multitask(train, model_name=name, timesteps=10)
             # model_multitask.save(f"{config.TRAINED_MODEL_DIR}/{name}")
             model_selected = model_multitask
         else:
@@ -494,10 +494,10 @@ def run_strategy(df, unique_trade_date, rebalance_window, validation_window, str
     end = time.time()
     print(strategy + " Strategy took: ", (end - start) / 60, " minutes")
 
-def train_multitask(df, model_name, timesteps=50000):
+def train_multitask(df, model_name, timesteps=10):
   # df of all intermixed values
   # get out the individual tickers and switch out the dates
-  # use all unique timesteps
+  # timesteps = num training steps per date
   model = None
   for date in df["datadate"].unique():
     for ticker in df["tic"].unique():
@@ -507,7 +507,7 @@ def train_multitask(df, model_name, timesteps=50000):
         continue
       quanta_df = quanta_df.reset_index()
       quanta_env = DummyVecEnv([lambda: StockEnvTrain(quanta_df)])
-      model = train_PPO_multitask(model, quanta_env)
+      model = train_PPO_multitask(model, quanta_env, timesteps)
   return model
 
 def train_PPO_multitask(initial_model, env_train, timesteps=10):
