@@ -54,6 +54,7 @@ class StockEnvTrade(gym.Env):
         self.cost = 0
         self.trades = 0
         # memorize all the total balance change
+        self.date_memory = [0]
         self.asset_memory = [INITIAL_ACCOUNT_BALANCE]
         self.rewards_memory = []
         #self.reset()
@@ -119,7 +120,8 @@ class StockEnvTrade(gym.Env):
             plt.savefig('results/account_value_trade_{}_{}.png'.format(self.model_name, self.iteration))
             plt.close()
             df_total_value = pd.DataFrame(self.asset_memory)
-            df_total_value.to_csv('results/account_value_trade_{}_{}.csv'.format(self.model_name, self.iteration))
+            results_output = pd.DataFrame({"date":self.date_memory, "assets":self.asset_memory})
+            results_output.to_csv('results/account_value_trade_{}_{}.csv'.format(self.model_name, self.iteration))
             end_total_asset = self.state[0]+ \
             sum(np.array(self.state[1:(STOCK_DIM+1)])*np.array(self.state[(STOCK_DIM+1):(STOCK_DIM*2+1)]))
             print("previous_total_asset:{}".format(self.asset_memory[0]))           
@@ -139,7 +141,8 @@ class StockEnvTrade(gym.Env):
             print("Sharpe: ",sharpe)
             
             df_rewards = pd.DataFrame(self.rewards_memory)
-            df_rewards.to_csv('results/account_rewards_trade_{}_{}.csv'.format(self.model_name, self.iteration))
+            results_output = pd.DataFrame({"date":self.date_memory[1:], "rewards":self.rewards_memory})
+            results_output.to_csv('results/account_rewards_trade_{}_{}.csv'.format(self.model_name, self.iteration))
             
             # print('total asset: {}'.format(self.state[0]+ sum(np.array(self.state[1:29])*np.array(self.state[29:]))))
             #with open('obs.pkl', 'wb') as f:  
@@ -188,6 +191,9 @@ class StockEnvTrade(gym.Env):
             self.reward = end_total_asset - begin_total_asset            
             # print("step_reward:{}".format(self.reward))
             self.rewards_memory.append(self.reward)
+
+            # also append the date
+            self.date_memory.append(self.data.loc["datadate"])
             self.asset_memory.append(end_total_asset)
 
 
@@ -196,6 +202,7 @@ class StockEnvTrade(gym.Env):
     def reset(self):  
         if self.initial:
             self.asset_memory = [INITIAL_ACCOUNT_BALANCE]
+            self.date_memory = [0]
             self.day = 0
             self.data = self.df.loc[self.day,:]
             self.turbulence = 0
@@ -211,6 +218,7 @@ class StockEnvTrade(gym.Env):
             previous_total_asset = self.previous_state[0]+ \
             sum(np.array(self.previous_state[1:(STOCK_DIM+1)])*np.array(self.previous_state[(STOCK_DIM+1):(STOCK_DIM*2+1)]))
             self.asset_memory = [previous_total_asset]
+            self.date_memory = [0]
             #self.asset_memory = [self.previous_state[0]]
             self.day = 0
             self.data = self.df.loc[self.day,:]
