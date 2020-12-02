@@ -194,6 +194,8 @@ def DRL_prediction(df,
     ### make a prediction based on trained model### 
 
     ## trading env
+    print("DRLPREDICTION")
+    print(name)
     trade_data = data_split(df, start=unique_trade_date[iter_num - rebalance_window], end=unique_trade_date[iter_num])
     env_trade = DummyVecEnv([lambda: StockEnvTrade(trade_data,
                                                    turbulence_threshold=turbulence_threshold,
@@ -392,7 +394,7 @@ def run_strategy(df, unique_trade_date, rebalance_window, validation_window, str
 
     # based on the analysis of the in-sample data
     #turbulence_threshold = 140
-    insample_turbulence = df[(df.datadate<20151000) & (df.datadate>=20090000)]
+    insample_turbulence = df.copy()
     insample_turbulence = insample_turbulence.drop_duplicates(subset=['datadate'])
     insample_turbulence_threshold = np.quantile(insample_turbulence.turbulence.values, .90)
 
@@ -467,7 +469,7 @@ def run_strategy(df, unique_trade_date, rebalance_window, validation_window, str
         print("======Trading from: ", unique_trade_date[i - rebalance_window], "to ", unique_trade_date[i])
 
         if strategy != "multitask":
-          last_state = DRL_prediction(df=df, model=model_selected, name=strategy,
+          last_state = DRL_prediction(df=df, model=model_selected, name=strategy+"_"+ticker,
                                               last_state=last_state, iter_num=i,
                                               unique_trade_date=unique_trade_date,
                                               rebalance_window=rebalance_window,
