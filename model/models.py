@@ -382,7 +382,7 @@ def run_ensemble_strategy(df, unique_trade_date, rebalance_window, validation_wi
     end = time.time()
     print("Ensemble Strategy took: ", (end - start) / 60, " minutes")
 
-def run_strategy(df, unique_trade_date, rebalance_window, validation_window, strategy, model_selected=None, ticker="") -> None:
+def run_strategy(df, unique_trade_date, rebalance_window, validation_window, strategy, model_selected=None, ticker="", policy_distillation_network=None, eval_mode=True) -> None:
     if strategy == 'Ensemble':
         run_ensemble_strategy(df, unique_trade_date, rebalance_window, validation_window)
         return
@@ -451,7 +451,8 @@ def run_strategy(df, unique_trade_date, rebalance_window, validation_window, str
           
             model_selected = model_ppo
         elif strategy =='policy distillation':
-            pass
+            model_ppo = train_PPO(env_train, model_name="PPO_" + ticker + "_{}".format(i), timesteps=50000)
+            model_selected.update(model_ppo)
         elif strategy == "multitask":
             print("======Mulitask Training========")
             name="Multitasks_{}".format(i)
@@ -465,7 +466,7 @@ def run_strategy(df, unique_trade_date, rebalance_window, validation_window, str
         model_use.append(strategy)
         ############## Training and Validation ends ##############    
 
-        ############## Trading starts ##############    
+        ############## Trading starts ##############   
         print("======Trading from: ", unique_trade_date[i - rebalance_window], "to ", unique_trade_date[i])
 
         if strategy != "multitask":
