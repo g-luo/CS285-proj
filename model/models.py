@@ -182,6 +182,15 @@ def train_PPO(env_train, model_name, timesteps=50000):
     print('Training time (PPO): ', (end - start) / 60, ' minutes')
     return model
 
+def train_PPO_update(initial_model, env_train, timesteps=10, policy="MlpPolicy"):
+    model = initial_model
+    if initial_model == None:
+        model = PPO2(policy, env_train)
+        #model.callback = ReplayBufferCallback()
+    model.set_env(env_train)
+    model.learn(total_timesteps=timesteps)
+    return model
+
 def DRL_prediction(df,
                    model,
                    name,
@@ -216,7 +225,7 @@ def DRL_prediction(df,
     df_last_state.to_csv('results/last_state_{}_{}.csv'.format(name, i), index=False)
     return last_state
 
-def my_DRL_prediction(df,
+def DRL_prediction_no_rebalance(df,
                    model,
                    name,
                    start_date,
@@ -382,6 +391,93 @@ def run_ensemble_strategy(df, unique_trade_date, rebalance_window, validation_wi
     end = time.time()
     print("Ensemble Strategy took: ", (end - start) / 60, " minutes")
 
+def run_strategy_no_rebalance(df, unique_trade_date, training_window, validation_window, strategy, ticker="", policy="MlpPolicy") -> None:
+    print("============Start " + strategy + " Strategy============")
+    # based on the analysis of the in-sample data
+    #turbulence_threshold = 140
+    insample_turbulence = df.copy()
+    insample_turbulence = insample_turbulence.drop_duplicates(subset=['datadate'])
+    insample_turbulence_threshold = np.quantile(insample_turbulence.turbulence.values, .90)
+
+    start = time.time()
+    model_selected = None
+    for i in range(0, len(unique_trade_date), training_window + validation_window):
+        print("============================================")
+        ## initial state is empty
+        initial = i == 0 
+
+        # set the time range to [training window, validation window]
+        start_train_date = unique_trade_date[i]
+        end_train_date = unique_trade_date[i + training_window]
+        start_val_date = end_train_date
+        end_val_date = unique_trade_date[i + training_window + validation_window]
+
+        # Tuning trubulence index based on historical data
+        # Turbulence lookback window is one quarter
+        historical_turbulence = df[(df.datadate<start_train_date - 63) & (df.datadate>=end_val_date)]
+        historical_turbulence = historical_turbulence.drop_duplicates(subset=['datadate'])
+        historical_turbulence_mean = np.mean(historical_turbulence.turbulence.values)   
+
+        if historical_turbulence_mean > insample_turbulence_threshold:
+            # if the mean of the historical data is greater than the 90% quantile of insample turbulence data
+            # then we assume that the current market is volatile, 
+            # therefore we set the 90% quantile of insample turbulence data as the turbulence threshold 
+            # meaning the current turbulence can't exceed the 90% quantile of insample turbulence data
+            turbulence_threshold = insample_turbulence_threshold
+        else:
+            # if the mean of the historical data is less than the 90% quantile of insample turbulence data
+            # then we tune up the turbulence_threshold, meaning we lower the risk 
+            turbulence_threshold = np.quantile(insample_turbulence.turbulence.values, 0.99)
+        print("turbulence_threshold: ", turbulence_threshold)
+
+        ############## Environment Setup starts ##############
+        train = data_split(df, start=start_train_date, end=end_train_date)
+        env_train = DummyVecEnv([lambda: StockEnvTrain(train)])
+        ############## Environment Setup ends ##############
+
+        ############## Training and Validation starts ##############
+        print("======Model training from: ", start_train_date, "to ", end_train_date)
+        if strategy == 'PPO':
+            print("======PPO Training========")
+            model_selected = train_PPO_update(model_selected, env_train, timesteps=50000, policy=policy)
+        elif strategy == "multitask":
+            print("======Mulitask Training========")
+            model_selected = train_multitask(model_selected, train, timesteps=10, policy=policy)
+        else:
+            print("Model is not part of supported list. Please choose from following list for strategy [Ensemble, PPO, A2C, DDPG]")
+            return
+        ############## Training and Validation ends ##############    
+
+        ############## Trading starts ##############   
+        print("======Trading from: ", start_val_date, "to ", end_val_date)
+
+        if strategy != "multitask":
+          last_state = DRL_prediction_no_rebalance(df=df, model=model_selected, name=strategy+"_"+ticker,
+                                              start_date=start_val_date,
+                                              end_date=end_val_date,
+                                              turbulence_threshold=turbulence_threshold,
+                                              initial=initial)
+        else:
+          for ticker in df["tic"].unique():
+            print("======Trading for : " + ticker + "======")
+            ticker_df = df[df["tic"] == ticker]
+            last_state = DRL_prediction_no_rebalance(df=ticker_df, model=model_selected, name=strategy+"_"+ticker,
+                                              start_date=start_val_date,
+                                              end_date=end_val_date,
+                                              turbulence_threshold=turbulence_threshold,
+                                              initial=initial)
+        # print("============Trading Done============")
+        ############## Trading ends ############## 
+    
+    model_name = strategy + "_" + ticker
+    if strategy !='policy distillation':
+      model_selected.save(f"{config.TRAINED_MODEL_DIR}/{model_name}")
+    if (hasattr(model_selected, "custom_replay_buffer")):
+      with open(f"{config.TRAINED_MODEL_DIR}/{model_name}"+"_buffer.pkl", "wb") as file:
+        pickle.dump(model_selected.custom_replay_buffer, file)
+    end = time.time()
+    print(strategy + " Strategy took: ", (end - start) / 60, " minutes")
+
 def run_strategy(df, unique_trade_date, rebalance_window, validation_window, strategy, model_selected=None, ticker="", policy_distillation_network=None, eval_mode=True) -> None:
     if strategy == 'Ensemble':
         run_ensemble_strategy(df, unique_trade_date, rebalance_window, validation_window)
@@ -497,11 +593,10 @@ def run_strategy(df, unique_trade_date, rebalance_window, validation_window, str
     end = time.time()
     print(strategy + " Strategy took: ", (end - start) / 60, " minutes")
 
-def train_multitask(df, model_name, timesteps=10):
+def train_multitask(model=None, df, model_name, timesteps=10, policy="MlpPolicy"):
   # df of all intermixed values
   # get out the individual tickers and switch out the dates
   # timesteps = num training steps per date
-  model = None
   for date in df["datadate"].unique():
     for ticker in df["tic"].unique():
       quanta_df = df[df["datadate"] == date]
@@ -510,41 +605,5 @@ def train_multitask(df, model_name, timesteps=10):
         continue
       quanta_df = quanta_df.reset_index()
       quanta_env = DummyVecEnv([lambda: StockEnvTrain(quanta_df)])
-      model = train_PPO_multitask(model, quanta_env, timesteps)
+      model = train_PPO_update(model, quanta_env, timesteps, policy=policy)
   return model
-
-def train_PPO_multitask(initial_model, env_train, timesteps=10):
-  start = time.time()
-  model = initial_model
-  if initial_model == None:
-    model = PPO2('MlpPolicy', env_train)
-    #model.callback = ReplayBufferCallback()
-  model.set_env(env_train)
-  model.learn(total_timesteps=timesteps)
-  end = time.time()
-  return model
-  
-# def run_multitask(stocks, tickers, quanta, start, end, model_name, timesteps_per_quanta=100):
-#   stock_dfs = []
-#   for i in range(len(stocks)):
-#     df = process_yahoo_finance(stocks[i], tickers[i])
-#     stock_dfs.append(data_split(df, start=start, end=end))  
-#   merged_stock_df = pd.concat(stock_dfs)
-
-#   num_quanta = math.ceil((end - start) / quanta)
-#   model = None
-#   for t in range(num_quanta):
-#     train_start, train_end = start + quanta * t, start + quanta * (t + 1)
-#     quanta_df = merged_stock_df[(merged_stock_df.datadate >= train_start) & (merged_stock_df.datadate < train_end)]
-#     quanta_df = quanta_df.reset_index()
-#     if quanta_df.empty:
-#       break
-#     quanta_env = DummyVecEnv([lambda: StockEnvTrain(quanta_df)])
-#     model = train_PPO_multitask(model, quanta_env, t, timesteps_per_quanta)
-  
-#   #model.custom_replay_buffer = replay_buffer_callback.get_replay_buffer()
-#   model.save(f"{config.TRAINED_MODEL_DIR}/{model_name}")
-#   #with open(f"{config.TRAINED_MODEL_DIR}/{model_name}"+"_buffer.pkl", "wb") as file:
-#   #  pickle.dump(replay_buffer_callback.get_buffer(), file)
-
-#   return model
