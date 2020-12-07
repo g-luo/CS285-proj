@@ -1,6 +1,6 @@
 # Deep RL 4 Stocks
-This repository contains implementations of policy distillation and multi-task learning for the final project of CS285, Deep Reinforcement Learning at UC Berkeley. \ 
-Authors: Grace Luo, Harry Zhao, Jerry Song
+This repository contains implementations of policy distillation and multi-task learning for the final project of CS285, Deep Reinforcement Learning at UC Berkeley.
+Authors: Grace Luo, Harry Zhao, Jerry Song.
 
 
 ## References
