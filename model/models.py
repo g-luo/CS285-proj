@@ -425,9 +425,10 @@ def run_strategy_no_rebalance(df, unique_trade_date, training_window, validation
 
         # Tuning trubulence index based on historical data
         # Turbulence lookback window is one quarter
-        historical_turbulence = df[(df.datadate<start_train_date - 63) & (df.datadate>=end_val_date)]
+        prev_start_train = start_train_date-training_window-validation_window
+        historical_turbulence = df[(df.datadate<prev_start_train) & (df.datadate>=prev_start_train-63)]
         historical_turbulence = historical_turbulence.drop_duplicates(subset=['datadate'])
-        historical_turbulence_mean = np.mean(historical_turbulence.turbulence.values)   
+        historical_turbulence_mean = np.mean(historical_turbulence.turbulence.values) 
 
         if historical_turbulence_mean > insample_turbulence_threshold:
             # if the mean of the historical data is greater than the 90% quantile of insample turbulence data
@@ -460,13 +461,13 @@ def run_strategy_no_rebalance(df, unique_trade_date, training_window, validation
         ############## Training and Validation ends ##############    
 
         ############## Trading starts ##############   
-        print("======Trading from: ", start_val_date, "to ", end_val_date)
+        print("======Trading from: ", start_train_date, "to ", end_val_date)
 
         if strategy != "multitask":
           last_state = DRL_prediction_no_rebalance(df=df, model=model_selected, name=strategy+"_"+ticker,
                                               last_state=last_state,
                                               iter_num=i,
-                                              start_date=start_val_date,
+                                              start_date=start_train_date,
                                               end_date=end_val_date,
                                               turbulence_threshold=turbulence_threshold,
                                               initial=initial)
@@ -477,7 +478,7 @@ def run_strategy_no_rebalance(df, unique_trade_date, training_window, validation
             last_state = DRL_prediction_no_rebalance(df=ticker_df, model=model_selected, name=strategy+"_"+ticker,
                                               last_state=last_state,
                                               iter_num=i,
-                                              start_date=start_val_date,
+                                              start_date=start_train_date,
                                               end_date=end_val_date,
                                               turbulence_threshold=turbulence_threshold,
                                               initial=initial)
@@ -485,11 +486,7 @@ def run_strategy_no_rebalance(df, unique_trade_date, training_window, validation
         ############## Trading ends ############## 
     
     model_name = strategy + "_" + ticker
-    if strategy !='policy distillation':
-      model_selected.save(f"{config.TRAINED_MODEL_DIR}/{model_name}")
-    if (hasattr(model_selected, "custom_replay_buffer")):
-      with open(f"{config.TRAINED_MODEL_DIR}/{model_name}"+"_buffer.pkl", "wb") as file:
-        pickle.dump(model_selected.custom_replay_buffer, file)
+    model_selected.save(f"{config.TRAINED_MODEL_DIR}/{model_name}")
     end = time.time()
     print(strategy + " Strategy took: ", (end - start) / 60, " minutes")
 
