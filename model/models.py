@@ -228,6 +228,8 @@ def DRL_prediction(df,
 def DRL_prediction_no_rebalance(df,
                    model,
                    name,
+                   last_state,
+                   iter_num,
                    start_date,
                    end_date,
                    turbulence_threshold,
@@ -236,7 +238,12 @@ def DRL_prediction_no_rebalance(df,
 
     ## trading env
     trade_data = data_split(df, start=start_date, end=end_date)
-    env_trade = DummyVecEnv([lambda: StockEnvTrade(trade_data)])
+    env_trade = DummyVecEnv([lambda: StockEnvTrade(trade_data,
+                                                  previous_state=last_state,
+                                                  turbulence_threshold=turbulence_threshold,
+                                                  initial=initial,
+                                                  model_name=name, 
+                                                  iteration=iter_num)])
     obs_trade = env_trade.reset()
 
     for i in range(len(trade_data.index.unique())):
@@ -401,12 +408,16 @@ def run_strategy_no_rebalance(df, unique_trade_date, training_window, validation
 
     start = time.time()
     model_selected = None
+    last_state = []
     for i in range(0, len(unique_trade_date), training_window + validation_window):
         print("============================================")
         ## initial state is empty
         initial = i == 0 
 
         # set the time range to [training window, validation window]
+        if i + training_window + validation_window >= len(unique_trade_date):
+          break
+
         start_train_date = unique_trade_date[i]
         end_train_date = unique_trade_date[i + training_window]
         start_val_date = end_train_date
@@ -453,6 +464,8 @@ def run_strategy_no_rebalance(df, unique_trade_date, training_window, validation
 
         if strategy != "multitask":
           last_state = DRL_prediction_no_rebalance(df=df, model=model_selected, name=strategy+"_"+ticker,
+                                              last_state=last_state,
+                                              iter_num=i,
                                               start_date=start_val_date,
                                               end_date=end_val_date,
                                               turbulence_threshold=turbulence_threshold,
@@ -462,6 +475,8 @@ def run_strategy_no_rebalance(df, unique_trade_date, training_window, validation
             print("======Trading for : " + ticker + "======")
             ticker_df = df[df["tic"] == ticker]
             last_state = DRL_prediction_no_rebalance(df=ticker_df, model=model_selected, name=strategy+"_"+ticker,
+                                              last_state=last_state,
+                                              iter_num=i,
                                               start_date=start_val_date,
                                               end_date=end_val_date,
                                               turbulence_threshold=turbulence_threshold,
@@ -593,7 +608,7 @@ def run_strategy(df, unique_trade_date, rebalance_window, validation_window, str
     end = time.time()
     print(strategy + " Strategy took: ", (end - start) / 60, " minutes")
 
-def train_multitask(model=None, df, model_name, timesteps=10, policy="MlpPolicy"):
+def train_multitask(model, df, timesteps=10, policy="MlpPolicy"):
   # df of all intermixed values
   # get out the individual tickers and switch out the dates
   # timesteps = num training steps per date
