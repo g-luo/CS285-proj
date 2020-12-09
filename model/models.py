@@ -398,7 +398,7 @@ def run_ensemble_strategy(df, unique_trade_date, rebalance_window, validation_wi
     end = time.time()
     print("Ensemble Strategy took: ", (end - start) / 60, " minutes")
 
-def run_strategy_no_rebalance(df, unique_trade_date, training_window, validation_window, strategy, ticker="", policy="MlpPolicy", policy_distillation_network=None) -> None:
+def run_strategy_no_rebalance(df, unique_trade_date, training_window, validation_window, strategy, ticker="", policy="MlpPolicy", model_selected = None) -> None:
     print("============Start " + strategy + " Strategy============")
     # based on the analysis of the in-sample data
     #turbulence_threshold = 140
@@ -407,7 +407,6 @@ def run_strategy_no_rebalance(df, unique_trade_date, training_window, validation
     insample_turbulence_threshold = np.quantile(insample_turbulence.turbulence.values, .90)
 
     start = time.time()
-    model_selected = None
     last_state = []
     for i in range(0, len(unique_trade_date), training_window + validation_window):
         print("============================================")
@@ -442,25 +441,24 @@ def run_strategy_no_rebalance(df, unique_trade_date, training_window, validation
             turbulence_threshold = np.quantile(insample_turbulence.turbulence.values, 0.99)
         print("turbulence_threshold: ", turbulence_threshold)
 
-        ############## Environment Setup starts ##############
-        train = data_split(df, start=start_train_date, end=end_train_date)
-        env_train = DummyVecEnv([lambda: StockEnvTrain(train)])
-        ############## Environment Setup ends ##############
+        if not model_selected:
+          ############## Environment Setup starts ##############
+          train = data_split(df, start=start_train_date, end=end_train_date)
+          env_train = DummyVecEnv([lambda: StockEnvTrain(train)])
+          ############## Environment Setup ends ##############
 
-        ############## Training and Validation starts ##############
-        print("======Model training from: ", start_train_date, "to ", end_train_date)
-        if strategy == 'PPO':
-            print("======PPO Training========")
-            model_selected = train_PPO_update(model_selected, env_train, timesteps=50000, policy=policy)
-        elif strategy == "multitask":
-            print("======Mulitask Training========")
-            model_selected = train_multitask(model_selected, train, timesteps=10, policy=policy)
-        elif strategy =="policy distillation":
-            model_selected = policy_distillation_network
-        else:
-            print("Model is not part of supported list. Please choose from following list for strategy [Ensemble, PPO, A2C, DDPG]")
-            return
-        ############## Training and Validation ends ##############    
+          ############## Training and Validation starts ##############
+          print("======Model training from: ", start_train_date, "to ", end_train_date)
+          if strategy == 'PPO':
+              print("======PPO Training========")
+              model_selected = train_PPO_update(model_selected, env_train, timesteps=50000, policy=policy)
+          elif strategy == "multitask":
+              print("======Mulitask Training========")
+              model_selected = train_multitask(model_selected, train, timesteps=10, policy=policy)
+          else:
+              print("Model is not part of supported list. Please choose from following list for strategy [Ensemble, PPO, A2C, DDPG]")
+              return
+          ############## Training and Validation ends ##############    
 
         ############## Trading starts ##############   
         print("======Trading from: ", start_train_date, "to ", end_val_date)
@@ -488,8 +486,7 @@ def run_strategy_no_rebalance(df, unique_trade_date, training_window, validation
         ############## Trading ends ############## 
     
     model_name = strategy + "_" + ticker
-    if strategy != "policy distillation":
-      model_selected.save(f"{config.TRAINED_MODEL_DIR}/{model_name}")
+    model_selected.save(f"{config.TRAINED_MODEL_DIR}/{model_name}")
     end = time.time()
     print(strategy + " Strategy took: ", (end - start) / 60, " minutes")
 
