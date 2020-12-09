@@ -23,11 +23,11 @@ class PolicyDistillation(object):
       student_network = StudentPolicy(
           ob_dim = envs[0].observation_space.shape[0],
           ac_dim = envs[0].action_space.shape[0],
-          n_layers=2, 
-          size=64, 
-          learning_rate=1e-4
+          n_layers=3, 
+          size=128, 
+          learning_rate=0.005
       )
-      num_epochs = 50
+      num_epochs = 10
       for _ in range(num_epochs):
         for i in range(len(teachers)):
           student_network.update(teachers[i])
@@ -43,14 +43,13 @@ class StudentPolicy(nn.Module):
                  ac_dim,
                  n_layers,
                  size,
-                 learning_rate=1e-4
+                 learning_rate=0.005
                  ):
         super().__init__()
         # init vars
         self.ob_dim = ob_dim
         self.ac_dim = ac_dim
         self.size = size
-        print(self.ob_dim)
         self.learning_rate = learning_rate
         self.n_layers = n_layers
         self.logits_na = utils.build_mlp(input_size=self.ob_dim,
@@ -81,17 +80,17 @@ class StudentPolicy(nn.Module):
       
     def update(self, teacher_model):
       # set the batch size to the buffer size to train sequentially
-      batch_size = teacher_model.custom_replay_buffer.get_buffer_size()
-      acs, obs, rews = teacher_model.custom_replay_buffer.sample(batch_size)
-
+      batch_size = 32
+      acs, obs, rews = teacher_model.custom_replay_buffer.sample(32)
       observations = utils.from_numpy(obs)
       actions = utils.from_numpy(acs)
       teacher_actions, _ = teacher_model.predict(observations)
       
       teacher_actions= utils.from_numpy(teacher_actions)
       student_actions = self.forward(observations)
-      loss = nn.functional.mse_loss(student_actions, teacher_actions)
       self.optimizer.zero_grad()
+      loss = nn.functional.mse_loss(student_actions, teacher_actions, reduction='sum')
+      
       loss.backward()
       self.optimizer.step()
         
