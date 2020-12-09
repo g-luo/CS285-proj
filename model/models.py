@@ -398,7 +398,7 @@ def run_ensemble_strategy(df, unique_trade_date, rebalance_window, validation_wi
     end = time.time()
     print("Ensemble Strategy took: ", (end - start) / 60, " minutes")
 
-def run_strategy_no_rebalance(df, unique_trade_date, training_window, validation_window, strategy, ticker="", policy="MlpPolicy") -> None:
+def run_strategy_no_rebalance(df, unique_trade_date, training_window, validation_window, strategy, ticker="", policy="MlpPolicy", policy_distillation_network=None) -> None:
     print("============Start " + strategy + " Strategy============")
     # based on the analysis of the in-sample data
     #turbulence_threshold = 140
@@ -455,6 +455,8 @@ def run_strategy_no_rebalance(df, unique_trade_date, training_window, validation
         elif strategy == "multitask":
             print("======Mulitask Training========")
             model_selected = train_multitask(model_selected, train, timesteps=10, policy=policy)
+        elif strategy =="policy distillation":
+            model_selected = policy_distillation_network
         else:
             print("Model is not part of supported list. Please choose from following list for strategy [Ensemble, PPO, A2C, DDPG]")
             return
@@ -486,7 +488,8 @@ def run_strategy_no_rebalance(df, unique_trade_date, training_window, validation
         ############## Trading ends ############## 
     
     model_name = strategy + "_" + ticker
-    model_selected.save(f"{config.TRAINED_MODEL_DIR}/{model_name}")
+    if strategy != "policy distillation":
+      model_selected.save(f"{config.TRAINED_MODEL_DIR}/{model_name}")
     end = time.time()
     print(strategy + " Strategy took: ", (end - start) / 60, " minutes")
 
