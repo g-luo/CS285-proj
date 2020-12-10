@@ -220,7 +220,7 @@ def get_validation_sharpe(iteration):
     return sharpe
 
 
-def run_strategy_no_rebalance(df, unique_trade_date, training_window, validation_window, strategy, ticker="", policy="MlpPolicy", policy_distillation_network=None, PPO_model=None) -> None:
+def run_strategy_no_rebalance(df, unique_trade_date, training_window, validation_window, strategy, ticker="", policy="MlpPolicy", model_selected=None) -> None:
     print("============Start " + strategy + " Strategy============")
     # based on the analysis of the in-sample data
     #turbulence_threshold = 140
@@ -229,7 +229,6 @@ def run_strategy_no_rebalance(df, unique_trade_date, training_window, validation
     insample_turbulence_threshold = np.quantile(insample_turbulence.turbulence.values, .90)
 
     start = time.time()
-    model_selected = None
     last_state = []
     for i in range(0, len(unique_trade_date), training_window + validation_window):
         print("============================================")
@@ -272,13 +271,21 @@ def run_strategy_no_rebalance(df, unique_trade_date, training_window, validation
         ############## Training and Validation starts ##############
         print("======Model training from: ", start_train_date, "to ", end_train_date)
         if strategy == 'PPO':
-            print("======PPO Training========")
-            model_selected = PPO_model
+            if model_selected is None:
+              print("======PPO Training========")
+              model_selected = train_PPO_update(model_selected, train, timesteps=50000, policy=policy)
+            else:
+              print("======PPO Testing========")
+              pass
         elif strategy == "multitask":
-            print("======Mulitask Training========")
-            model_selected = train_multitask(model_selected, train, timesteps=10, policy=policy)
+            if model_selected is None:
+              print("======Mulitask Training========")
+              model_selected = train_multitask(model_selected, train, timesteps=10, policy=policy)
+            else:
+              print("======Multitask Testing========")
+              pass
         elif strategy =="policy distillation":
-            model_selected = policy_distillation_network
+            pass
         else:
             print("Model is not part of supported list. Please choose from following list for strategy [Ensemble, PPO, A2C, DDPG]")
             return
