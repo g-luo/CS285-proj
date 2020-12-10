@@ -65,31 +65,28 @@ class StockEnvTrade(gym.Env):
 
     def _sell_stock(self, index, action):
         # perform sell action based on the sign of the action
+        # we can be in debt because there is no cashout (can't short more shares)
         if self.turbulence<self.turbulence_threshold:
-            if self.state[index+STOCK_DIM+1] > 0:
-                #update balance
+            #update balance
+            available_amount = self.state[0] // self.state[index+1]
+            if available_amount > 0:
                 self.state[0] += \
                 self.state[index+1]*min(abs(action),self.state[index+STOCK_DIM+1]) * \
-                 (1- TRANSACTION_FEE_PERCENT)
+                  (1- TRANSACTION_FEE_PERCENT)
                 
-                self.state[index+STOCK_DIM+1] -= min(abs(action), self.state[index+STOCK_DIM+1])
-                self.cost +=self.state[index+1]*min(abs(action),self.state[index+STOCK_DIM+1]) * \
-                 TRANSACTION_FEE_PERCENT
+                self.state[index+STOCK_DIM+1] -= min(abs(action), available_amount)
+                self.cost +=self.state[index+1]*min(abs(action), available_amount) * \
+                  TRANSACTION_FEE_PERCENT
                 self.trades+=1
-            else:
-                pass
         else:
-            # if turbulence goes over threshold, just clear out all positions 
-            if self.state[index+STOCK_DIM+1] > 0:
-                #update balance
-                self.state[0] += self.state[index+1]*self.state[index+STOCK_DIM+1]* \
-                              (1- TRANSACTION_FEE_PERCENT)
-                self.state[index+STOCK_DIM+1] =0
-                self.cost += self.state[index+1]*self.state[index+STOCK_DIM+1]* \
-                              TRANSACTION_FEE_PERCENT
-                self.trades+=1
-            else:
-                pass
+            # if turbulence goes over threshold, just clear out all positions
+            self.state[0] += self.state[index+1]*self.state[index+STOCK_DIM+1]* \
+                          (1- TRANSACTION_FEE_PERCENT)
+            self.state[index+STOCK_DIM+1] =0
+            self.cost += self.state[index+1]*self.state[index+STOCK_DIM+1]* \
+                          TRANSACTION_FEE_PERCENT
+            self.trades+=1
+          
     
     def _buy_stock(self, index, action):
         # perform buy action based on the sign of the action

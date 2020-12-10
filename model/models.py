@@ -273,9 +273,16 @@ def run_strategy_no_rebalance(df, unique_trade_date, training_window, validation
         if strategy == 'PPO':
             if model_selected is None:
               print("======PPO Training========")
-              model_selected = train_PPO_update(model_selected, train, timesteps=50000, policy=policy)
+              model_selected = train_PPO_update(model_selected, env_train, timesteps=100, policy=policy)
             else:
               print("======PPO Testing========")
+              pass
+        if strategy == 'DQN':
+            if model_selected is None:
+              print("======DQN Training========")
+              model_selected = train_DQN_update(model_selected, env_train, timesteps=100, policy=policy)
+            else:
+              print("======DQN Testing========")
               pass
         elif strategy == "multitask":
             if model_selected is None:
