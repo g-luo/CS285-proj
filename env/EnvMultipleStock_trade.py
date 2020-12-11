@@ -45,6 +45,7 @@ class StockEnvTrade(gym.Env):
         self.data = self.df.loc[self.day,:]
         self.terminal = False     
         self.turbulence_threshold = turbulence_threshold
+        self.turbulence_threshold = float('inf')
         # initalize state
         self.reset_state([INITIAL_ACCOUNT_BALANCE], [0]*STOCK_DIM)
 
