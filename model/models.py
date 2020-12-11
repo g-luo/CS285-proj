@@ -277,6 +277,8 @@ def run_strategy_no_rebalance(df, unique_trade_date, training_window, validation
             else:
               print("======PPO Testing========")
               pass
+        elif strategy =='sanity':
+            pass
         elif strategy == 'DQN':
             if model_selected is None:
               print("======DQN Training========")
