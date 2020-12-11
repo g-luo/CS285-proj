@@ -12,7 +12,7 @@ from preprocessing.utils import series_to_list
 
 # shares normalization factor
 # 100 shares per trade
-HMAX_NORMALIZE = 100
+HMAX_NORMALIZE = 1000
 # initial amount of money we have in our account
 INITIAL_ACCOUNT_BALANCE=1000000
 # total number of stocks in our portfolio
