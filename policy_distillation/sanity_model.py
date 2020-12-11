@@ -10,8 +10,8 @@ class SanityModel(object):
     r = random.randint(0,1)
 
     if r==1:
-      return 0*np.ones(self.ac_dim), None
+      return 1*np.ones(self.ac_dim), None
     else:
-      return 0*np.ones(self.ac_dim), None
+      return -1*np.ones(self.ac_dim), None
   def save(self, *args):
     pass
