@@ -82,7 +82,7 @@ class StockEnvTrade(gym.Env):
             # if turbulence goes over threshold, just clear out all positions
             self.state[0] += self.state[index+1]*self.state[index+STOCK_DIM+1]* \
                           (1- TRANSACTION_FEE_PERCENT)
-            self.state[index+STOCK_DIM+1] =0
+            self.state[index+STOCK_DIM+1] = 0
             self.cost += self.state[index+1]*self.state[index+STOCK_DIM+1]* \
                           TRANSACTION_FEE_PERCENT
             self.trades+=1
@@ -182,6 +182,8 @@ class StockEnvTrade(gym.Env):
             
             end_total_asset = self.state[0]+ \
             sum(np.array(self.state[1:(STOCK_DIM+1)])*np.array(self.state[(STOCK_DIM+1):(STOCK_DIM*2+1)]))
+            
+            # close postions ???
             
             #print("end_total_asset:{}".format(end_total_asset))
             
