@@ -1,7 +1,7 @@
 from policy_distillation.policy_distillation import PolicyDistillation
 from preprocessing.preprocessors import data_split, add_turbulence, process_yahoo_finance
 from stable_baselines import PPO2
-from model.models import train_PPO, run_student
+from model.models import train_PPO
 from stable_baselines.common.vec_env import DummyVecEnv
 from env.EnvMultipleStock_train import StockEnvTrain
 import torch

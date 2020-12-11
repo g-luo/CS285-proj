@@ -277,7 +277,7 @@ def run_strategy_no_rebalance(df, unique_trade_date, training_window, validation
             else:
               print("======PPO Testing========")
               pass
-        if strategy == 'DQN':
+        elif strategy == 'DQN':
             if model_selected is None:
               print("======DQN Training========")
               model_selected = train_DQN_update(model_selected, env_train, timesteps=100, policy=policy)
