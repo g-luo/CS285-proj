@@ -5,13 +5,17 @@ class SanityModel(object):
     self.ac_dim = (1,ac_dim)
     print("sanity model ac dim")
     print(self.ac_dim)
+    self.counter=0
 
   def predict(self, obs):
-    r = random.randint(0,1)
-
+    r = self.counter%2
     if r==1:
-      return 1*np.ones(self.ac_dim), None
-    else:
+      self.counter = self.counter+1
       return -1*np.ones(self.ac_dim), None
+    else:
+      self.counter = self.counter+1
+      return 1*np.ones(self.ac_dim), None
+    
+
   def save(self, *args):
     pass
