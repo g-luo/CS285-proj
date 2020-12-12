@@ -72,8 +72,8 @@ class StockEnvTrade(gym.Env):
               self.trades +=1
             available_stocks = self.state[0] // self.state[index+1]
             short_stocks = min(abs(action) - sell_stocks, available_stocks)
-            if available_stocks > 0:
-                self.state[0] += self.state[index+1] * short_stocks * (1 - TRANSACTION_FEE_PERCENT)
+            if short_stocks > 0:
+                self.state[0] -= self.state[index+1] * short_stocks * (1 - TRANSACTION_FEE_PERCENT)
                 self.state[index+STOCK_DIM+1] -= short_stocks
                 self.cost += self.state[index+1] * short_stocks * TRANSACTION_FEE_PERCENT
                 self.trades+=1
@@ -93,14 +93,21 @@ class StockEnvTrade(gym.Env):
     def _buy_stock(self, index, action):
         # perform buy action based on the sign of the action
         if self.turbulence< self.turbulence_threshold:
-            available_stocks = self.state[0] // self.state[index+1]
-            num_stocks = min(abs(action), available_stocks)
+            buy_stocks = min(abs(action), abs(self.state[index+STOCK_DIM+1]))
+            if self.state[index+STOCK_DIM+1] < 0:
+                self.state[0] += self.state[index+1] * buy_stocks * (1 + TRANSACTION_FEE_PERCENT)
+                self.state[index+STOCK_DIM+1] += buy_stocks
+                self.cost += self.state[index+1] * buy_stocks * TRANSACTION_FEE_PERCENT
+                self.trades += 1
 
-            #update balance
-            self.state[0] -= self.state[index+1] * num_stocks * (1 + TRANSACTION_FEE_PERCENT)
-            self.state[index+STOCK_DIM+1] += num_stocks
-            self.cost += self.state[index+1] * num_stocks * TRANSACTION_FEE_PERCENT
-            self.trades += 1
+            available_stocks = self.state[0] // self.state[index+1]
+            num_stocks = min(abs(action) - buy_stocks, available_stocks)
+            if num_stocks > 0:
+                #update balance
+                self.state[0] -= self.state[index+1] * num_stocks * (1 + TRANSACTION_FEE_PERCENT)
+                self.state[index+STOCK_DIM+1] += num_stocks
+                self.cost += self.state[index+1] * num_stocks * TRANSACTION_FEE_PERCENT
+                self.trades += 1
         else:
             # if turbulence goes over threshold, just stop buying
             pass
