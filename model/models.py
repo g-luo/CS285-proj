@@ -274,12 +274,7 @@ def run_strategy_no_rebalance(df, unique_trade_date, training_window, validation
         ############## Training and Validation starts ##############
         print("======Model training from: ", start_train_date, "to ", end_train_date)
         if strategy == 'PPO':
-            if model_selected is None:
-              print("======PPO Training========")
-              model_selected = train_PPO_update(model_selected, env_train, timesteps=100, policy=policy)
-            else:
-              print("======PPO Testing========")
-              pass
+            pass
         elif strategy =='sanity':
             pass
         elif strategy == 'DQN':
@@ -334,10 +329,7 @@ def run_strategy_no_rebalance(df, unique_trade_date, training_window, validation
     end = time.time()
     print(strategy + " Strategy took: ", (end - start) / 60, " minutes")
 
-def run_strategy(df, unique_trade_date, rebalance_window, validation_window, strategy, model_selected=None, ticker="", policy_distillation_network=None, eval_mode=True) -> None:
-    if strategy == 'Ensemble':
-        run_ensemble_strategy(df, unique_trade_date, rebalance_window, validation_window)
-        return
+def run_strategy(df, unique_trade_date, rebalance_window, validation_window, strategy, model_selected=None, ticker="") -> None:
     
     print("============Start " + strategy + " Strategy============")
     last_state = []
@@ -384,15 +376,6 @@ def run_strategy(df, unique_trade_date, rebalance_window, validation_window, str
         ## training env
         train = data_split(df, start=20090000, end=unique_trade_date[i - rebalance_window - validation_window])
         env_train = DummyVecEnv([lambda: StockEnvTrade(train)])
-
-        ## validation env
-#         validation = data_split(df, start=unique_trade_date[i - rebalance_window - validation_window],
-#                                 end=unique_trade_date[i - rebalance_window])
-#         env_val = DummyVecEnv([lambda: StockEnvValidation(validation,
-#                                                           turbulence_threshold=turbulence_threshold,
-#                                                           iteration=i)])
-#         obs_val = env_val.reset()
-        ############## Environment Setup ends ##############
 
         ############## Training and Validation starts ##############
         print("======Model training from: ", 20090000, "to ",
