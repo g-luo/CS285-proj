@@ -25,8 +25,6 @@ from policy_distillation.replay_buffer_callback import ReplayBufferCallback
 from preprocessing.preprocessors import process_yahoo_finance, data_split
 
 # customized env
-from env.EnvMultipleStock_train import StockEnvTrain
-from env.EnvMultipleStock_validation import StockEnvValidation
 from env.EnvMultipleStock_trade import StockEnvTrade
 
 def train_SAC(env_train, model_name, timesteps=50000):
@@ -186,7 +184,8 @@ def DRL_prediction_no_rebalance(df,
                                                   turbulence_threshold=turbulence_threshold,
                                                   initial=initial,
                                                   model_name=name, 
-                                                  iteration=iter_num)])
+                                                  iteration=iter_num, 
+                                                  output=True)])
     obs_trade = env_trade.reset()
     print(trade_data.index.unique())
     for i in range(len(trade_data.index.unique())):
@@ -265,7 +264,11 @@ def run_strategy_no_rebalance(df, unique_trade_date, training_window, validation
 
         ############## Environment Setup starts ##############
         train = data_split(df, start=start_train_date, end=end_train_date)
-        env_train = DummyVecEnv([lambda: StockEnvTrain(train)])
+        env_train = DummyVecEnv([lambda: StockEnvTrade(train, 
+                                                  previous_state=last_state,
+                                                  turbulence_threshold=turbulence_threshold,
+                                                  initial=initial)])
+        env_train.reset()
         ############## Environment Setup ends ##############
 
         ############## Training and Validation starts ##############
@@ -380,7 +383,7 @@ def run_strategy(df, unique_trade_date, rebalance_window, validation_window, str
         ############## Environment Setup starts ##############
         ## training env
         train = data_split(df, start=20090000, end=unique_trade_date[i - rebalance_window - validation_window])
-        env_train = DummyVecEnv([lambda: StockEnvTrain(train)])
+        env_train = DummyVecEnv([lambda: StockEnvTrade(train)])
 
         ## validation env
 #         validation = data_split(df, start=unique_trade_date[i - rebalance_window - validation_window],
@@ -457,6 +460,6 @@ def train_multitask(model, df, timesteps=10, policy="MlpPolicy"):
       if quanta_df.empty:
         continue
       quanta_df = quanta_df.reset_index()
-      quanta_env = DummyVecEnv([lambda: StockEnvTrain(quanta_df)])
+      quanta_env = DummyVecEnv([lambda: StockEnvTrade(quanta_df)])
       model = train_PPO_update(model, quanta_env, timesteps, policy=policy)
   return model
