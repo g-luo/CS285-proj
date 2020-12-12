@@ -3,7 +3,7 @@ from preprocessing.preprocessors import data_split, add_turbulence, process_yaho
 from stable_baselines import PPO2
 from model.models import train_PPO
 from stable_baselines.common.vec_env import DummyVecEnv
-from env.EnvMultipleStock_train import StockEnvTrain
+from env.EnvMultipleStock_trade import StockEnvTrade
 import torch
 import os
 
@@ -17,7 +17,7 @@ def train_PPO_models(stocks = ['./data/TSLA.csv', './data/FB.csv'],
     df = process_yahoo_finance(stocks[i], tickers[i])
     train = data_split(df, start=start_date, end=end_date)
     
-    env_train = DummyVecEnv([lambda: StockEnvTrain(train)])
+    env_train = DummyVecEnv([lambda: StockEnvTrade(train)])
     model = train_PPO(env_train, model_name='PPO_'+tickers[i])
     model.save(model_save_path+"PPO_"+tickers[i])
     teachers.append(model)
