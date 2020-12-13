@@ -197,7 +197,7 @@ class StockEnvTrade(gym.Env):
             # set the state with the new positions
             self.reset_state([self.state[0]], list(self.state[(STOCK_DIM+1):(STOCK_DIM*2+1)]))
             
-            print(self.state)
+            #print(self.state)
             end_total_asset = self.state[0]+ \
             sum(np.array(self.state[1:(STOCK_DIM+1)])*np.array(self.state[(STOCK_DIM+1):(STOCK_DIM*2+1)]))
             
