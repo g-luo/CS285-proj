@@ -6,7 +6,7 @@
 
 from stable_baselines.common.policies import MlpPolicy
 from stable_baselines import DQN
-
+import random
 from torch import optim
 from torch import nn
 from torch import distributions
@@ -67,8 +67,11 @@ class StudentPolicy(nn.Module):
         observation = obs[None]
       observation = utils.from_numpy(observation)
       actions = self(observation)
-      
-      return utils.to_numpy(actions), None
+      r = random.randint(0,2)
+      if r==0:
+        return -1* utils.to_numpy(actions), None
+      else:
+        return utils.to_numpy(actions), None
     
     def forward(self, observation: torch.FloatTensor):
       """
