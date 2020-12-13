@@ -23,14 +23,14 @@ class PolicyDistillation(object):
       student_network = StudentPolicy(
           ob_dim = envs[0].observation_space.shape[0],
           ac_dim = envs[0].action_space.shape[0],
-          n_layers=2, 
+          n_layers=3, 
           size=64, 
           learning_rate=0.005
       )
-      # num_epochs = 50
-      # for _ in range(num_epochs):
-      #   for i in range(len(teachers)):
-      #     student_network.update(teachers[i])
+      num_epochs = 500
+      for _ in range(num_epochs):
+        for i in range(len(teachers)):
+          student_network.update(teachers[i])
             
       end = time.time()
       print('Training time: ', (end - start) / 60, ' minutes')
