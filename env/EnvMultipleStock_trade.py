@@ -210,6 +210,7 @@ class StockEnvTrade(gym.Env):
                 print("total_reward:{}".format(end_total_asset - self.asset_memory[0]))
                 print("total_cost: ", self.cost)
                 print("total trades: ", self.trades)
+                print("balance:",self.state[0])
 
             self.reward = end_total_asset - begin_total_asset
             self.rewards_memory.append(self.reward)
